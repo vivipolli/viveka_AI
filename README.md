@@ -7,7 +7,7 @@ material fornecido, cita as fontes e nunca busca informação na internet.
 
 ## Principais características
 
-- **Bibliotecária inteligente**: respostas objetivas e curtas, com sugestão de leitura apontando ao texto original da mestre — a IA facilita o acesso, não substitui a leitura.
+- **Bibliotecária inteligente**: respostas objetivas e curtas, com sugestão de leitura apontando ao texto original do mestre — a IA facilita o acesso, não substitui a leitura.
 - Respostas baseadas apenas no conteúdo indexado, com citação de fontes.
 - Busca híbrida: similaridade vetorial (pgvector) + full-text (PostgreSQL).
 - Cache inteligente por similaridade de embedding, reduzindo chamadas ao LLM.

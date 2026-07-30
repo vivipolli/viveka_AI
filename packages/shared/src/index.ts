@@ -30,7 +30,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   sources?: SourceReference[];
-  /** Sugestao de leitura apontando ao trecho original da mestre. */
+  /** Sugestao de leitura apontando ao trecho original do mestre. */
   readingSuggestion?: string;
   createdAt: string;
 }

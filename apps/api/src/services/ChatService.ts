@@ -25,7 +25,7 @@ export interface ChatParams {
 
 /**
  * Orquestra o fluxo RAG: respostas objetivas + sugestao de leitura apontando
- * ao texto original da mestre (bibliotecaria inteligente, nao substituta).
+ * ao texto original do mestre (bibliotecaria inteligente, nao substituta).
  */
 export async function* handleChat(
   params: ChatParams,
