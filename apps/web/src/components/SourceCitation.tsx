@@ -22,6 +22,9 @@ export function SourceCitation({ sources }: Props) {
         {sources.map((source, i) => (
           <li key={`${source.documentId}-${i}`} className="text-sm text-solar-text">
             <span className="font-semibold">{source.title}</span>
+            {source.type === "story" && source.author && (
+              <span> — {source.author}</span>
+            )}
             {source.chapter && <span> — {source.chapter}</span>}
             {source.page != null && <span> — p. {source.page}</span>}
             {source.year != null && <span> ({source.year})</span>}

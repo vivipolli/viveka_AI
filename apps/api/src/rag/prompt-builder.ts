@@ -22,8 +22,9 @@ export interface BuiltPrompt {
 
 /** Monta prompt final, fontes e sugestao de leitura a partir dos chunks recuperados. */
 export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPrompt {
+  const orderedChunks = prioritizeStoryChunks(chunks);
   const contextBlock = buildContextBlock(
-    chunks.map((c) => ({
+    orderedChunks.map((c) => ({
       content: c.content,
       title: c.title,
       author: c.author ?? undefined,
@@ -34,7 +35,7 @@ export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPromp
   );
 
   const sources = dedupeSources(
-    chunks.map((c) => ({
+    orderedChunks.map((c) => ({
       documentId: c.documentId,
       title: c.title,
       author: c.author ?? undefined,
@@ -46,7 +47,7 @@ export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPromp
     })),
   );
 
-  const primarySource = primarySourceFromChunks(chunks);
+  const primarySource = primarySourceFromChunks(orderedChunks);
   const readingSuggestion = buildReadingSuggestion(primarySource, question);
 
   return {
@@ -71,4 +72,13 @@ function dedupeSources(sources: SourceReference[]): SourceReference[] {
   }
 
   return result;
+}
+
+function prioritizeStoryChunks(chunks: ScoredChunk[]): ScoredChunk[] {
+  return [...chunks].sort((a, b) => {
+    const aStory = a.type === "story" ? 1 : 0;
+    const bStory = b.type === "story" ? 1 : 0;
+    if (aStory !== bStory) return bStory - aStory;
+    return b.finalScore - a.finalScore;
+  });
 }

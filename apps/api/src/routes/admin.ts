@@ -1,26 +1,24 @@
 import type { FastifyInstance } from "fastify";
 import type { DocumentType, SupportedLanguage } from "shared";
+import { DOCUMENT_TYPES } from "shared";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import {
   deleteDocument,
   getDocument,
+  getDocumentFilePath,
   listDocuments,
+  updateDocumentFilePath,
 } from "../database/repositories/documents.js";
 import {
   getChunkPreview,
   ingestDocument,
   reprocessEmbeddings,
 } from "../services/DocumentService.js";
+import { readUpload, saveUpload } from "../lib/uploads.js";
 import { rebuildVectorIndex } from "../vector/store.js";
 
-const VALID_TYPES: DocumentType[] = [
-  "book",
-  "pdf",
-  "document",
-  "text",
-  "transcript",
-];
+const VALID_TYPES = DOCUMENT_TYPES;
 const VALID_LANGUAGES: SupportedLanguage[] = ["pt", "en", "es", "bn"];
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
@@ -31,6 +29,33 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/admin/documents", async () => ({
     documents: await listDocuments(),
   }));
+
+  app.get("/api/admin/documents/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const doc = await getDocument(id);
+    if (!doc) return reply.code(404).send({ error: "not found" });
+    return { document: doc };
+  });
+
+  app.get("/api/admin/documents/:id/download", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const doc = await getDocument(id);
+    if (!doc) return reply.code(404).send({ error: "not found" });
+    if (doc.type !== "pdf" || !doc.hasFile) {
+      return reply.code(404).send({ error: "file not available" });
+    }
+
+    const filePath = await getDocumentFilePath(id);
+    if (!filePath) return reply.code(404).send({ error: "file not found" });
+
+    const buffer = await readUpload(filePath);
+    const safeName = `${doc.title.replace(/[^\w\s.-]/g, "").trim() || "document"}.pdf`;
+
+    return reply
+      .header("Content-Type", "application/pdf")
+      .header("Content-Disposition", `attachment; filename="${safeName}"`)
+      .send(buffer);
+  });
 
   app.get("/api/admin/documents/:id/chunks", async (request, reply) => {
     const { id } = request.params as { id: string };
@@ -81,7 +106,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         chapter: body.chapter,
         page: body.page,
         year: body.year,
-        type: normalizeType(body.type, "text"),
+        type: normalizeType(body.type, "citation"),
         language: normalizeLanguage(body.language),
         source: body.source,
       },
@@ -127,12 +152,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         chapter: fields.chapter || undefined,
         page: fields.page ? Number(fields.page) : undefined,
         year: fields.year ? Number(fields.year) : undefined,
-        type: normalizeType(fields.type as DocumentType, isPdf ? "pdf" : "document"),
+        type: normalizeType(fields.type as DocumentType, isPdf ? "pdf" : "citation"),
         language: normalizeLanguage(fields.language as SupportedLanguage),
         source: fields.source || undefined,
       },
       text,
     );
+
+    if (isPdf) {
+      const filePath = await saveUpload(id, fileBuffer, fileName);
+      await updateDocumentFilePath(id, filePath);
+    }
 
     return { id };
   });

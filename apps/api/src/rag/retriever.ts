@@ -6,6 +6,8 @@ export interface ScoredChunk extends RetrievedChunk {
   finalScore: number;
 }
 
+const STORY_SCORE_BOOST = 1.25;
+
 /**
  * Recupera os chunks mais relevantes combinando busca vetorial e textual,
  * limitando o total de tokens para nunca ultrapassar o contexto do modelo.
@@ -34,8 +36,11 @@ function combineScores(chunks: RetrievedChunk[]): ScoredChunk[] {
     .map((c) => {
       const vNorm = c.vectorScore / maxVector;
       const tNorm = c.textScore / maxText;
-      const finalScore =
+      let finalScore =
         config.hybridVectorWeight * vNorm + config.hybridTextWeight * tNorm;
+      if (c.type === "story") {
+        finalScore *= STORY_SCORE_BOOST;
+      }
       return { ...c, finalScore };
     })
     .sort((a, b) => b.finalScore - a.finalScore);

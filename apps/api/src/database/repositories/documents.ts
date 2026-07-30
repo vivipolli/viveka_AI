@@ -5,6 +5,7 @@ import type {
   SupportedLanguage,
 } from "shared";
 import { query } from "../client.js";
+import { deleteUpload } from "../../lib/uploads.js";
 
 export interface CreateDocumentInput {
   title: string;
@@ -53,6 +54,21 @@ export async function updateDocumentStatus(
   ]);
 }
 
+export async function updateDocumentFilePath(
+  id: string,
+  filePath: string,
+): Promise<void> {
+  await query(`UPDATE documents SET file_path = $2 WHERE id = $1`, [id, filePath]);
+}
+
+export async function getDocumentFilePath(id: string): Promise<string | null> {
+  const result = await query<{ file_path: string | null }>(
+    `SELECT file_path FROM documents WHERE id = $1`,
+    [id],
+  );
+  return result.rows[0]?.file_path ?? null;
+}
+
 export async function listDocuments(): Promise<DocumentMetadata[]> {
   const result = await query<{
     id: string;
@@ -64,12 +80,13 @@ export async function listDocuments(): Promise<DocumentMetadata[]> {
     type: DocumentType;
     language: SupportedLanguage;
     source: string | null;
+    file_path: string | null;
     status: DocumentStatus;
     chunk_count: string;
     created_at: Date;
   }>(
     `SELECT d.id, d.title, d.author, d.chapter, d.page, d.year, d.type,
-            d.language, d.source, d.status, d.created_at,
+            d.language, d.source, d.file_path, d.status, d.created_at,
             COUNT(c.id) AS chunk_count
      FROM documents d
      LEFT JOIN document_chunks c ON c.document_id = d.id
@@ -88,6 +105,7 @@ export async function listDocuments(): Promise<DocumentMetadata[]> {
     language: r.language,
     source: r.source ?? undefined,
     status: r.status,
+    hasFile: Boolean(r.file_path),
     chunkCount: Number(r.chunk_count),
     createdAt: r.created_at.toISOString(),
   }));
@@ -104,11 +122,12 @@ export async function getDocument(id: string): Promise<DocumentMetadata | null> 
     type: DocumentType;
     language: SupportedLanguage;
     source: string | null;
+    file_path: string | null;
     status: DocumentStatus;
     created_at: Date;
   }>(
     `SELECT id, title, author, chapter, page, year, type, language, source,
-            status, created_at
+            file_path, status, created_at
      FROM documents WHERE id = $1`,
     [id],
   );
@@ -125,10 +144,15 @@ export async function getDocument(id: string): Promise<DocumentMetadata | null> 
     language: r.language,
     source: r.source ?? undefined,
     status: r.status,
+    hasFile: Boolean(r.file_path),
     createdAt: r.created_at.toISOString(),
   };
 }
 
 export async function deleteDocument(id: string): Promise<void> {
+  const filePath = await getDocumentFilePath(id);
+  if (filePath) {
+    await deleteUpload(filePath);
+  }
   await query(`DELETE FROM documents WHERE id = $1`, [id]);
 }

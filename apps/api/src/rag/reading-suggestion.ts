@@ -43,6 +43,27 @@ function labelsFor(lang: SupportedLanguage) {
 }
 
 function formatRef(source: PrimarySource, lang: SupportedLanguage): string {
+  if (source.type === "story") {
+    if (lang === "en") {
+      return source.author
+        ? `the story "${source.title}", as told by ${source.author}`
+        : `the story "${source.title}"`;
+    }
+    if (lang === "es") {
+      return source.author
+        ? `la historia "${source.title}", contada por ${source.author}`
+        : `la historia "${source.title}"`;
+    }
+    if (lang === "bn") {
+      return source.author
+        ? `"${source.title}" গল্পটি, ${source.author} কর্তৃক বর্ণিত`
+        : `"${source.title}" গল্পটি`;
+    }
+    return source.author
+      ? `a história "${source.title}", contada por ${source.author}`
+      : `a história "${source.title}"`;
+  }
+
   const { chapter, page, book, of: ofWord } = labelsFor(lang);
   const parts: string[] = [];
 
@@ -56,7 +77,7 @@ function formatRef(source: PrimarySource, lang: SupportedLanguage): string {
 
   const location = parts.length > 0 ? parts.join(", ") : null;
 
-  if (source.type === "book") {
+  if (source.type === "pdf") {
     if (lang === "bn") {
       return location
         ? `${book} ${source.title} এর ${location}`
@@ -109,7 +130,8 @@ export function primarySourceFromChunks(
     type: string;
   }>,
 ): PrimarySource | undefined {
-  const top = chunks[0];
+  const story = chunks.find((chunk) => chunk.type === "story");
+  const top = story ?? chunks[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,
@@ -124,7 +146,8 @@ export function primarySourceFromChunks(
 export function primarySourceFromReferences(
   sources: SourceReference[],
 ): PrimarySource | undefined {
-  const top = sources[0];
+  const story = sources.find((source) => source.type === "story");
+  const top = story ?? sources[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,

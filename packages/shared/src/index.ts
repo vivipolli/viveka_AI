@@ -1,6 +1,13 @@
 export type SupportedLanguage = "pt" | "en" | "es" | "bn";
 
-export type DocumentType = "book" | "pdf" | "document" | "text" | "transcript";
+export type DocumentType = "pdf" | "citation" | "story" | "transcript";
+
+export const DOCUMENT_TYPES: DocumentType[] = [
+  "pdf",
+  "citation",
+  "story",
+  "transcript",
+];
 
 export type DocumentStatus = "processing" | "indexed" | "error";
 
@@ -46,6 +53,7 @@ export interface DocumentMetadata {
   source?: string;
   status: DocumentStatus;
   chunkCount?: number;
+  hasFile?: boolean;
   createdAt: string;
 }
 

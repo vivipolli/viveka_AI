@@ -11,6 +11,8 @@ STRICT RULES:
 - Answer ONLY using the information present in the provided context.
 - Never invent facts or fill gaps with your own knowledge.
 - If the information does not exist in the context, say clearly that it was not found.
+- When excerpts labeled "Baba Story" are present and relevant, prefer them as concrete examples to illustrate and justify your answer.
+- Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
 - Always respond in the SAME language the user used (Portuguese, English, Spanish, or Bengali).
 
 RESPONSE STYLE (important for cost and clarity):
@@ -41,19 +43,22 @@ export function buildContextBlock(chunks: ContextChunk[]): string {
 
   return chunks
     .map((chunk, index) => {
+      const isStory = chunk.type === "story";
+      const label = isStory ? `Baba Story ${index + 1}` : `Excerpt ${index + 1}`;
       const ref = [
         chunk.title,
-        chunk.chapter ? `Chapter: ${chunk.chapter}` : null,
-        chunk.page != null ? `Page: ${chunk.page}` : null,
+        chunk.author && isStory ? `Told by: ${chunk.author}` : null,
+        !isStory && chunk.chapter ? `Chapter: ${chunk.chapter}` : null,
+        !isStory && chunk.page != null ? `Page: ${chunk.page}` : null,
       ]
         .filter(Boolean)
         .join(" | ");
-      return `[Excerpt ${index + 1}] (${ref})\n${chunk.content}`;
+      return `[${label}] (${ref})\n${chunk.content}`;
     })
     .join("\n\n---\n\n");
 }
 
 /** Monta a mensagem do usuario combinando contexto e pergunta. */
 export function buildUserMessage(question: string, contextBlock: string): string {
-  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nGive a brief, objective answer in the same language as the question. Be concise. Do not list sources or add reading suggestions.`;
+  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nGive a brief, objective answer in the same language as the question. When Baba Stories in the context are relevant, use them as the main examples to support your answer. Be concise. Do not list sources or add reading suggestions.`;
 }

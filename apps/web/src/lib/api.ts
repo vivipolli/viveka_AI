@@ -171,6 +171,25 @@ export async function adminFetchChunks(
   return data.chunks;
 }
 
+export async function adminDownloadPdf(
+  password: string,
+  id: string,
+  fileName: string,
+): Promise<void> {
+  const res = await fetch(apiUrl(`/api/admin/documents/${id}/download`), {
+    headers: adminHeaders(password),
+  });
+  if (!res.ok) throw new Error("download failed");
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function adminReindex(password: string): Promise<void> {
   await fetch(apiUrl("/api/admin/reindex"), {
     method: "POST",
