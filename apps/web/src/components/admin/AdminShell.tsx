@@ -17,7 +17,7 @@ export function AdminShell({ children, onLogout }: Props) {
     }`;
 
   return (
-    <div className="mx-auto min-h-screen max-w-5xl px-4 py-8">
+    <div className="mx-auto min-h-screen max-w-5xl px-4 py-8 pb-[max(3rem,env(safe-area-inset-bottom))]">
       <header className="mb-8 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-extrabold text-solar-text">

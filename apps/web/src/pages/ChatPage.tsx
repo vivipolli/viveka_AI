@@ -57,7 +57,7 @@ export function ChatPage() {
     lastMessage.content.length === 0;
 
   return (
-    <div className="relative flex h-dvh">
+    <div className="fixed inset-0 flex h-dvh overflow-hidden">
       <SunRays />
 
       <MobileMenu
