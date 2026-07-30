@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --color-solar-yellow: #ffd166;
+  --color-solar-orange: #f4845f;
+  --color-solar-gold: #ffb347;
+  --color-solar-cream: #fff8f0;
+  --color-solar-warm: #ffecd2;
+  --color-solar-text: #3d2c1e;
+  --color-solar-muted: #7a6555;
+
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-solar-text);
+  background: radial-gradient(
+      circle at 50% 110%,
+      var(--color-solar-yellow) 0%,
+      var(--color-solar-warm) 35%,
+      var(--color-solar-cream) 70%
+    )
+    fixed;
+}
+
+/* Rolagem suave e discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-solar-gold) transparent;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s ease-out;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.typing-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}

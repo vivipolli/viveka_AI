@@ -1,0 +1,84 @@
+{
+  "app": {
+    "title": "Viveka AI",
+    "subtitle": "Acervo Inteligente de la filosofia de Ananda Marga"
+  },
+  "chat": {
+    "welcomeTitle": "Namaskar",
+    "welcomeText": "Esta plataforma le ayuda a encontrar fragmentos relevantes en las ensenanzas de la maestra. La IA facilita el acceso — no sustituye la lectura, la reflexion ni la practica.",
+    "philosophy": "Bibliotecaria inteligente: respuestas objetivas que apuntan a los textos originales.",
+    "disclaimer": "Las respuestas se basan unicamente en los textos registrados. Nada se busca en internet.",
+    "placeholder": "Escribe tu pregunta...",
+    "send": "Preguntar",
+    "thinking": "Reflexionando...",
+    "newConversation": "Nueva conversacion",
+    "history": "Tus conversaciones",
+    "emptyHistory": "Aun no hay conversaciones",
+    "sources": "Fuentes",
+    "readingSuggestion": "Sugerencia de lectura",
+    "cachedNote": "Respuesta recuperada de una pregunta similar",
+    "examples": {
+      "title": "Ejemplos de preguntas",
+      "one": "Cual es el proposito de la vida segun las ensenanzas?",
+      "two": "Como cultivar la paz interior cada dia?",
+      "three": "Que dicen los textos sobre el amor?"
+    },
+    "errors": {
+      "generic": "Ocurrio un error. Intenta de nuevo.",
+      "rateLimit": "Has alcanzado el limite de preguntas de hoy. Vuelve manana."
+    }
+  },
+  "feedback": {
+    "useful": "Util",
+    "notUseful": "No util",
+    "thanks": "Gracias por tu comentario"
+  },
+  "language": {
+    "label": "Idioma",
+    "pt": "Portugues",
+    "en": "Ingles",
+    "es": "Espanol",
+    "bn": "Bengali"
+  },
+  "menu": {
+    "title": "Menu",
+    "open": "Abrir menu",
+    "close": "Cerrar menu"
+  },
+  "footer": {
+    "creditBefore": "Creado con",
+    "creditAfter": " por la hija de Baba."
+  },
+  "admin": {
+    "title": "Administracion",
+    "login": "Entrar",
+    "password": "Contrasena de administrador",
+    "loginError": "Contrasena invalida",
+    "documents": "Documentos",
+    "upload": "Importar documento",
+    "uploadFile": "Archivo (PDF o TXT)",
+    "docTitle": "Titulo",
+    "author": "Autor",
+    "chapter": "Capitulo",
+    "page": "Pagina",
+    "year": "Ano",
+    "type": "Tipo",
+    "language": "Idioma",
+    "source": "Fuente",
+    "content": "Contenido (texto)",
+    "submit": "Importar",
+    "reprocess": "Reprocesar embeddings",
+    "delete": "Eliminar",
+    "reindex": "Reconstruir indice vectorial",
+    "viewChunks": "Ver fragmentos",
+    "status": {
+      "processing": "Procesando",
+      "indexed": "Indexado",
+      "error": "Error"
+    },
+    "chunks": "Fragmentos generados",
+    "noDocuments": "Ningun documento registrado",
+    "chunkCount": "fragmentos",
+    "backToChat": "Volver al chat"
+  }
+}

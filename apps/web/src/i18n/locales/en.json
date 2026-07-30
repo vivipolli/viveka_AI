@@ -1,0 +1,84 @@
+{
+  "app": {
+    "title": "Viveka AI",
+    "subtitle": "Intelligent Archive of Ananda Marga philosophy"
+  },
+  "chat": {
+    "welcomeTitle": "Namaskar",
+    "welcomeText": "This platform helps you find relevant passages in the master's teachings. The AI facilitates access — it does not replace reading, reflection, or practice.",
+    "philosophy": "Intelligent librarian: concise answers that point to the original texts.",
+    "disclaimer": "Answers are based solely on the registered texts. Nothing is fetched from the internet.",
+    "placeholder": "Write your question...",
+    "send": "Ask",
+    "thinking": "Reflecting...",
+    "newConversation": "New conversation",
+    "history": "Your conversations",
+    "emptyHistory": "No conversations yet",
+    "sources": "Sources",
+    "readingSuggestion": "Reading suggestion",
+    "cachedNote": "Answer retrieved from a similar question",
+    "examples": {
+      "title": "Example questions",
+      "one": "What is the purpose of life according to the teachings?",
+      "two": "How can I cultivate inner peace every day?",
+      "three": "What do the texts say about love?"
+    },
+    "errors": {
+      "generic": "An error occurred. Please try again.",
+      "rateLimit": "You have reached today's question limit. Come back tomorrow."
+    }
+  },
+  "feedback": {
+    "useful": "Useful",
+    "notUseful": "Not useful",
+    "thanks": "Thank you for your feedback"
+  },
+  "language": {
+    "label": "Language",
+    "pt": "Portuguese",
+    "en": "English",
+    "es": "Spanish",
+    "bn": "Bengali"
+  },
+  "menu": {
+    "title": "Menu",
+    "open": "Open menu",
+    "close": "Close menu"
+  },
+  "footer": {
+    "creditBefore": "Created with",
+    "creditAfter": " by Baba's daughter."
+  },
+  "admin": {
+    "title": "Administration",
+    "login": "Sign in",
+    "password": "Administrator password",
+    "loginError": "Invalid password",
+    "documents": "Documents",
+    "upload": "Import document",
+    "uploadFile": "File (PDF or TXT)",
+    "docTitle": "Title",
+    "author": "Author",
+    "chapter": "Chapter",
+    "page": "Page",
+    "year": "Year",
+    "type": "Type",
+    "language": "Language",
+    "source": "Source",
+    "content": "Content (text)",
+    "submit": "Import",
+    "reprocess": "Reprocess embeddings",
+    "delete": "Remove",
+    "reindex": "Rebuild vector index",
+    "viewChunks": "View chunks",
+    "status": {
+      "processing": "Processing",
+      "indexed": "Indexed",
+      "error": "Error"
+    },
+    "chunks": "Generated chunks",
+    "noDocuments": "No documents registered",
+    "chunkCount": "chunks",
+    "backToChat": "Back to chat"
+  }
+}
