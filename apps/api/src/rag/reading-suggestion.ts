@@ -158,3 +158,29 @@ export function primarySourceFromReferences(
     type: top.type,
   };
 }
+
+/** Reduz fontes salvas em cache para a principal (e no maximo mais uma). */
+export function filterCitationSources(
+  sources: SourceReference[],
+): SourceReference[] {
+  if (sources.length === 0) return [];
+
+  const primary = primarySourceFromReferences(sources);
+  if (!primary) return sources.slice(0, 1);
+
+  const primaryRef =
+    sources.find(
+      (source) =>
+        source.documentId === primary.documentId &&
+        (source.chapter ?? "") === (primary.chapter ?? "") &&
+        (source.page ?? null) === (primary.page ?? null),
+    ) ?? sources.find((source) => source.documentId === primary.documentId);
+
+  if (!primaryRef) return [];
+
+  const secondary = sources.find(
+    (source) => source.documentId !== primary.documentId,
+  );
+
+  return secondary ? [primaryRef, secondary] : [primaryRef];
+}

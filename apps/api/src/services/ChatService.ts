@@ -12,6 +12,7 @@ import { findCachedAnswer, saveCachedAnswer } from "../rag/cache.js";
 import { buildPrompt } from "../rag/prompt-builder.js";
 import {
   buildReadingSuggestion,
+  filterCitationSources,
   notFoundMessage,
   primarySourceFromReferences,
 } from "../rag/reading-suggestion.js";
@@ -48,10 +49,11 @@ export async function* handleChat(
 
   const cached = await findCachedAnswer(embedding);
   if (cached) {
+    const sources = filterCitationSources(cached.sources);
     const readingSuggestion =
       cached.readingSuggestion ??
       buildReadingSuggestion(
-        primarySourceFromReferences(cached.sources),
+        primarySourceFromReferences(sources),
         question,
       );
 
@@ -60,15 +62,15 @@ export async function* handleChat(
     if (readingSuggestion) {
       yield { type: "readingSuggestion", text: readingSuggestion };
     }
-    if (cached.sources.length > 0) {
-      yield { type: "sources", sources: cached.sources };
+    if (sources.length > 0) {
+      yield { type: "sources", sources };
     }
     await addMessage({
       id: assistantMessageId,
       conversationId,
       role: "assistant",
       content: cached.answer,
-      sources: cached.sources,
+      sources,
       readingSuggestion,
     });
     yield { type: "done" };
