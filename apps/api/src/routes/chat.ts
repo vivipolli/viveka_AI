@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ChatRequest, ChatStreamEvent } from "shared";
+import { config } from "../config.js";
 import { checkAndConsume } from "../database/repositories/rateLimit.js";
 import {
   ensureSession,
@@ -17,6 +18,23 @@ function getClientIp(request: FastifyRequest): string {
   const forwarded = request.headers["x-forwarded-for"];
   if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
   return request.ip;
+}
+
+function sseHeaders(request: FastifyRequest): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  };
+
+  const origin = request.headers.origin;
+  if (typeof origin === "string" && config.corsOrigin.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Vary"] = "Origin";
+  }
+
+  return headers;
 }
 
 export async function chatRoutes(app: FastifyInstance): Promise<void> {
@@ -52,12 +70,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(429).send({ error: "rate_limit_exceeded" });
     }
 
-    reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
+    reply.raw.writeHead(200, sseHeaders(request));
 
     try {
       for await (const event of handleChat({
