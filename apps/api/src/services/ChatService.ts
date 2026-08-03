@@ -12,6 +12,7 @@ import { findCachedAnswer, saveCachedAnswer } from "../rag/cache.js";
 import { buildPrompt } from "../rag/prompt-builder.js";
 import {
   buildReadingSuggestion,
+  detectQuestionLanguage,
   filterCitationSources,
   notFoundMessage,
   primarySourceFromReferences,
@@ -46,8 +47,9 @@ export async function* handleChat(
   await addMessage({ conversationId, role: "user", content: question });
 
   const embedding = await getEmbeddingProvider().embed(question);
+  const language = detectQuestionLanguage(question);
 
-  const cached = await findCachedAnswer(embedding);
+  const cached = await findCachedAnswer(embedding, language);
   if (cached) {
     const sources = filterCitationSources(cached.sources);
     const readingSuggestion =
@@ -137,7 +139,7 @@ export async function* handleChat(
     answer,
     sources,
     readingSuggestion,
-    language: "auto",
+    language,
   });
 
   yield { type: "done" };

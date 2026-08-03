@@ -2,6 +2,8 @@
  * Prompt de sistema rigido. A IA atua como bibliotecaria inteligente:
  * facilita o acesso aos ensinamentos, nao substitui a leitura original.
  */
+import type { SupportedLanguage } from "shared";
+
 export const SYSTEM_PROMPT = `You are an intelligent librarian helping people find and understand teachings from a spiritual master. You are NOT the teacher. Your role is to facilitate access to the original texts — never to replace reading, reflection, or practice.
 
 CORE PRINCIPLE:
@@ -13,7 +15,7 @@ STRICT RULES:
 - If the information does not exist in the context, say clearly that it was not found.
 - When excerpts labeled "Baba Story" are present and relevant, prefer them as concrete examples to illustrate and justify your answer.
 - Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
-- Always respond in the SAME language the user used (Portuguese, English, Spanish, or Bengali).
+- Always respond in the response language specified in the user message, even when the context excerpts are in another language.
 
 RESPONSE STYLE (important for cost and clarity):
 - Be OBJECTIVE and CONCISE. Prefer 2–4 short paragraphs or a brief bullet list.
@@ -25,6 +27,13 @@ RESPONSE STYLE (important for cost and clarity):
 
 TONE:
 Warm, respectful, clear, suitable for a lay reader. Point the user toward the original material rather than positioning yourself as the authority.`;
+
+const RESPONSE_LANGUAGE: Record<SupportedLanguage, string> = {
+  pt: "Portuguese",
+  en: "English",
+  es: "Spanish",
+  bn: "Bengali",
+};
 
 export interface ContextChunk {
   content: string;
@@ -59,6 +68,11 @@ export function buildContextBlock(chunks: ContextChunk[]): string {
 }
 
 /** Monta a mensagem do usuario combinando contexto e pergunta. */
-export function buildUserMessage(question: string, contextBlock: string): string {
-  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nGive a brief, objective answer in the same language as the question. When Baba Stories in the context are relevant, use them as the main examples to support your answer. Be concise. Do not list sources or add reading suggestions.`;
+export function buildUserMessage(
+  question: string,
+  contextBlock: string,
+  language: SupportedLanguage,
+): string {
+  const responseLanguage = RESPONSE_LANGUAGE[language];
+  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nRESPONSE LANGUAGE: ${responseLanguage}\n\nWrite your entire answer in ${responseLanguage}, even if the context excerpts are written in another language. Be brief and objective. When Baba Stories in the context are relevant, use them as the main examples. Do not list sources or add reading suggestions.`;
 }

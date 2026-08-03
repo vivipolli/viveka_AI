@@ -7,6 +7,7 @@ import {
 } from "../prompts/system.js";
 import {
   buildReadingSuggestion,
+  detectQuestionLanguage,
   primarySourceFromChunks,
   type PrimarySource,
 } from "./reading-suggestion.js";
@@ -25,6 +26,7 @@ const CITATION_SCORE_RATIO = 0.75;
 
 /** Monta prompt final, fontes e sugestao de leitura a partir dos chunks recuperados. */
 export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPrompt {
+  const language = detectQuestionLanguage(question);
   const orderedChunks = prioritizeStoryChunks(chunks);
   const contextBlock = buildContextBlock(
     orderedChunks.map((c) => ({
@@ -43,7 +45,7 @@ export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPromp
 
   return {
     system: SYSTEM_PROMPT,
-    user: buildUserMessage(question, contextBlock),
+    user: buildUserMessage(question, contextBlock, language),
     sources,
     primarySource,
     readingSuggestion,

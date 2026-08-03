@@ -11,21 +11,34 @@ export interface PrimarySource {
 
 const BENGALI_SCRIPT = /[\u0980-\u09FF]/;
 
+const PORTUGUESE_WORDS =
+  /\b(não|nao|você|voce|estou|está|esta|são|sinto|sozinha|muito|também|tambem|porque|quando|como|minha|minhas|ainda|prefiro|solidão|solidao|desconforto|pessoas|conversas|profundamente|interesse|também|ser|uma|com|para|mas|me|do|da|dos|das|estou|estamos)\b/i;
+
+const SPANISH_WORDS =
+  /\b(qué|que|cómo|como|cuál|cual|por qué|dónde|donde|cuando|estoy|siento|también|muy|soledad|prefiero|personas|conversaciones|profundamente|interés|interes)\b/i;
+
+const ENGLISH_WORDS =
+  /\b(the|and|or|but|with|from|about|what|how|why|when|where|which|who|does|do|did|is|are|was|were|am|be|been|have|has|had|will|would|could|should|can|may|might|must|i|you|he|she|it|we|they|me|my|your|his|her|its|our|their|this|that|these|those|feel|feeling|alone|sometimes|often|people|deeply|connect|prefer|home|interest|superficial|uncomfortable|anyone|many|not|don't|doesn't|can't|won't|isn't|aren't|i'm|you're|it's|that's|there's|being|without|really|just|even|though|while|because|something|anything|everything)\b/i;
+
 /** Heuristica simples para alinhar a sugestao de leitura ao idioma da pergunta. */
 export function detectQuestionLanguage(text: string): SupportedLanguage {
   if (BENGALI_SCRIPT.test(text)) return "bn";
 
   const lower = text.toLowerCase();
   const hasPtAccents = /[ãõáéíóúâêôç]/.test(lower);
-  const hasSpanish =
-    /[¿¡]/.test(text) ||
-    /\b(qué|cómo|cuál|por qué|dónde|cuando)\b/.test(lower);
-  const hasEnglish = /\b(the|what|how|why|when|where|which|does|is|are)\b/.test(
-    lower,
-  );
+  const hasPortuguese = hasPtAccents || PORTUGUESE_WORDS.test(lower);
+  const hasSpanish = /[¿¡]/.test(text) || SPANISH_WORDS.test(lower);
+  const hasEnglish = ENGLISH_WORDS.test(lower);
 
-  if (hasSpanish && !hasPtAccents) return "es";
-  if (hasEnglish && !hasPtAccents && !hasSpanish) return "en";
+  if (hasPortuguese && !hasEnglish && !hasSpanish) return "pt";
+  if (hasSpanish && !hasPortuguese) return "es";
+  if (hasEnglish && !hasPortuguese && !hasSpanish) return "en";
+  if (hasPortuguese) return "pt";
+  if (hasSpanish) return "es";
+  if (hasEnglish) return "en";
+
+  if (/^[a-z0-9\s.,!?;:'"()\-]+$/i.test(text.trim())) return "en";
+
   return "pt";
 }
 
