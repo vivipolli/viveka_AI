@@ -40,16 +40,16 @@ export function AdminPage() {
 
   return (
     <AdminShell onLogout={logout}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 max-[500px]:flex-col max-[500px]:items-stretch">
         <div>
-          <h2 className="text-xl font-bold text-solar-text">
+          <h2 className="text-xl font-bold text-solar-text max-[500px]:text-lg">
             {t("admin.uploadTitle")}
           </h2>
           <p className="text-sm text-solar-muted">{t("admin.uploadSubtitle")}</p>
         </div>
         <Link
           to="/admin/documents"
-          className="rounded-xl border border-solar-warm bg-white/70 px-4 py-2 text-sm font-semibold transition hover:bg-white"
+          className="rounded-xl border border-solar-warm bg-white/70 px-4 py-2 text-center text-sm font-semibold transition hover:bg-white max-[500px]:w-full"
         >
           {t("admin.viewAllDocuments")}
         </Link>
@@ -103,7 +103,7 @@ function UploadForm({ password }: { password: string }) {
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-2xl bg-white/70 p-5 shadow backdrop-blur"
+      className="space-y-4 rounded-2xl bg-white/70 p-5 shadow backdrop-blur max-[500px]:p-4"
     >
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-semibold text-solar-muted">{t("admin.type")}</span>
@@ -125,7 +125,7 @@ function UploadForm({ password }: { password: string }) {
         )}
       </label>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 max-[500px]:grid-cols-1">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-solar-muted">{t("admin.language")}</span>
           <select

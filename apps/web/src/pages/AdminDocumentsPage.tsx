@@ -82,9 +82,9 @@ export function AdminDocumentsPage() {
 
   return (
     <AdminShell onLogout={logout}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 max-[500px]:flex-col max-[500px]:items-stretch">
         <div>
-          <h2 className="text-xl font-bold text-solar-text">
+          <h2 className="text-xl font-bold text-solar-text max-[500px]:text-lg">
             {t("admin.documentsTitle")}
           </h2>
           <p className="text-sm text-solar-muted">
@@ -94,7 +94,7 @@ export function AdminDocumentsPage() {
         <button
           type="button"
           onClick={() => adminReindex(password).then(refresh)}
-          className="rounded-xl border border-solar-warm bg-white/70 px-4 py-2 text-sm font-semibold transition hover:bg-white"
+          className="rounded-xl border border-solar-warm bg-white/70 px-4 py-2 text-sm font-semibold transition hover:bg-white max-[500px]:w-full"
         >
           {t("admin.reindex")}
         </button>
@@ -111,12 +111,14 @@ export function AdminDocumentsPage() {
           {documents.map((doc) => (
             <article
               key={doc.id}
-              className="rounded-2xl bg-white/70 p-4 shadow backdrop-blur"
+              className="rounded-2xl bg-white/70 p-4 shadow backdrop-blur max-[500px]:p-3"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-solar-text">{doc.title}</h3>
-                  <p className="mt-1 text-xs text-solar-muted">
+              <div className="flex flex-wrap items-start justify-between gap-3 max-[500px]:flex-col">
+                <div className="min-w-0 flex-1 max-[500px]:w-full">
+                  <h3 className="font-semibold text-solar-text break-words">
+                    {doc.title}
+                  </h3>
+                  <p className="mt-1 text-xs leading-relaxed text-solar-muted">
                     {t(`admin.types.${doc.type}`)} · {doc.language} ·{" "}
                     {doc.chunkCount ?? 0} {t("admin.chunkCount")} ·{" "}
                     <StatusBadge status={doc.status} />
@@ -128,11 +130,11 @@ export function AdminDocumentsPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-[500px]:grid max-[500px]:w-full max-[500px]:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => toggleDetails(doc.id)}
-                    className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white"
+                    className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white max-[500px]:w-full max-[500px]:py-2.5"
                   >
                     {expandedId === doc.id
                       ? t("admin.hideDetails")
@@ -143,7 +145,7 @@ export function AdminDocumentsPage() {
                       type="button"
                       disabled={busyId === doc.id}
                       onClick={() => handleDownload(doc)}
-                      className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white disabled:opacity-50"
+                      className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white disabled:opacity-50 max-[500px]:w-full max-[500px]:py-2.5"
                     >
                       {t("admin.download")}
                     </button>
@@ -157,7 +159,7 @@ export function AdminDocumentsPage() {
                         .then(refresh)
                         .finally(() => setBusyId(null));
                     }}
-                    className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white disabled:opacity-50"
+                    className="rounded-lg border border-solar-warm bg-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white disabled:opacity-50 max-[500px]:w-full max-[500px]:py-2.5"
                   >
                     {t("admin.reprocess")}
                   </button>
@@ -165,7 +167,7 @@ export function AdminDocumentsPage() {
                     type="button"
                     disabled={busyId === doc.id}
                     onClick={() => handleDelete(doc)}
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50 max-[500px]:col-span-2 max-[500px]:w-full max-[500px]:py-2.5"
                   >
                     {t("admin.delete")}
                   </button>
@@ -224,7 +226,7 @@ function MetadataGrid({ doc }: { doc: DocumentMetadata }) {
   }
 
   return (
-    <dl className="grid gap-2 sm:grid-cols-2">
+    <dl className="grid gap-2 sm:grid-cols-2 max-[500px]:grid-cols-1">
       {items.map((item) => (
         <div key={item.label} className="rounded-lg bg-solar-cream/60 px-3 py-2">
           <dt className="text-xs font-bold uppercase text-solar-muted">
