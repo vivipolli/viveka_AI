@@ -25,9 +25,10 @@ export function consumeStreamToken(
   state: StreamParseState,
   token: string,
 ): string | null {
+  state.buffer += token;
+
   if (state.metadataStarted) return null;
 
-  state.buffer += token;
   const markerIdx = state.buffer.indexOf(METADATA_MARKER);
   if (markerIdx >= 0) {
     const visible = state.buffer.slice(0, markerIdx);
@@ -57,14 +58,33 @@ function findSafeYieldEnd(buffer: string): number {
 export function parseChatResponse(raw: string): ParsedChatResponse {
   const markerIdx = raw.indexOf(METADATA_MARKER);
   if (markerIdx < 0) {
-    return { answer: raw.trim(), usedSourceIndices: [] };
+    return parseFallbackMetadata(raw);
   }
 
   const answer = raw.slice(0, markerIdx).trim();
   const jsonPart = raw.slice(markerIdx + METADATA_MARKER.length).trim();
 
+  return parseMetadataJson(answer, jsonPart);
+}
+
+function parseFallbackMetadata(raw: string): ParsedChatResponse {
+  const match = raw.match(/\nCITATION_JSON\s*:\s*(\{[\s\S]*\})\s*$/i);
+  if (!match) {
+    return { answer: raw.trim(), usedSourceIndices: [] };
+  }
+
+  const answer = raw.slice(0, match.index).trim();
+  return parseMetadataJson(answer, match[1]);
+}
+
+function parseMetadataJson(answer: string, jsonPart: string): ParsedChatResponse {
+  const cleaned = jsonPart
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
   try {
-    const parsed = JSON.parse(jsonPart) as {
+    const parsed = JSON.parse(cleaned) as {
       usedSources?: unknown;
       readingSuggestion?: unknown;
     };
@@ -83,7 +103,16 @@ export function parseChatResponse(raw: string): ParsedChatResponse {
 
 function normalizeIndices(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.filter((item): item is number => Number.isInteger(item) && item > 0))];
+
+  const indices = value
+    .map((item) => {
+      if (typeof item === "number" && Number.isInteger(item)) return item;
+      if (typeof item === "string" && /^\d+$/.test(item)) return Number(item);
+      return null;
+    })
+    .filter((item): item is number => item !== null && item > 0);
+
+  return [...new Set(indices)];
 }
 
 export function resolveSourcesFromIndices(
