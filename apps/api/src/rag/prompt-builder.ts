@@ -27,7 +27,7 @@ const CITATION_SCORE_RATIO = 0.75;
 /** Monta prompt final, fontes e sugestao de leitura a partir dos chunks recuperados. */
 export function buildPrompt(question: string, chunks: ScoredChunk[]): BuiltPrompt {
   const language = detectQuestionLanguage(question);
-  const orderedChunks = prioritizeStoryChunks(chunks);
+  const orderedChunks = orderChunksByRelevance(chunks);
   const contextBlock = buildContextBlock(
     orderedChunks.map((c) => ({
       content: c.content,
@@ -77,12 +77,9 @@ function selectCitationSources(chunks: ScoredChunk[]): SourceReference[] {
     }
   }
 
-  const ranked = [...bestByDocument.values()].sort((a, b) => {
-    const aStory = a.type === "story" ? 1 : 0;
-    const bStory = b.type === "story" ? 1 : 0;
-    if (aStory !== bStory) return bStory - aStory;
-    return b.finalScore - a.finalScore;
-  });
+  const ranked = [...bestByDocument.values()].sort(
+    (a, b) => b.finalScore - a.finalScore,
+  );
 
   const topScore = ranked[0]?.finalScore ?? 0;
   const minScore = topScore * CITATION_SCORE_RATIO;
@@ -109,11 +106,6 @@ function dedupeSources(sources: SourceReference[]): SourceReference[] {
   return result;
 }
 
-function prioritizeStoryChunks(chunks: ScoredChunk[]): ScoredChunk[] {
-  return [...chunks].sort((a, b) => {
-    const aStory = a.type === "story" ? 1 : 0;
-    const bStory = b.type === "story" ? 1 : 0;
-    if (aStory !== bStory) return bStory - aStory;
-    return b.finalScore - a.finalScore;
-  });
+function orderChunksByRelevance(chunks: ScoredChunk[]): ScoredChunk[] {
+  return [...chunks].sort((a, b) => b.finalScore - a.finalScore);
 }

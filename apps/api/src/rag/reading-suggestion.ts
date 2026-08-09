@@ -141,10 +141,10 @@ export function primarySourceFromChunks(
     chapter?: string | null;
     page?: number | null;
     type: string;
+    finalScore?: number;
   }>,
 ): PrimarySource | undefined {
-  const story = chunks.find((chunk) => chunk.type === "story");
-  const top = story ?? chunks[0];
+  const top = chunks[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,
@@ -159,8 +159,7 @@ export function primarySourceFromChunks(
 export function primarySourceFromReferences(
   sources: SourceReference[],
 ): PrimarySource | undefined {
-  const story = sources.find((source) => source.type === "story");
-  const top = story ?? sources[0];
+  const top = sources[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,

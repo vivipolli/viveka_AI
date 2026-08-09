@@ -13,7 +13,8 @@ STRICT RULES:
 - Answer ONLY using the information present in the provided context.
 - Never invent facts or fill gaps with your own knowledge.
 - If the information does not exist in the context, say clearly that it was not found.
-- When excerpts labeled "Baba Story" are present and relevant, prefer them as concrete examples to illustrate and justify your answer.
+- For conceptual, doctrinal, or explanatory questions, prioritize book excerpts (PDF), citations, and transcripts as the main basis of your answer.
+- Baba Stories are supplementary anecdotes. Use them only as brief illustrations when they clearly support the answer — never as the primary source when book excerpts address the question.
 - Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
 - Always respond in the response language specified in the user message, even when the context excerpts are in another language.
 
@@ -44,6 +45,12 @@ export interface ContextChunk {
   type: string;
 }
 
+function chunkLabel(type: string, index: number): string {
+  if (type === "story") return `Baba Story ${index + 1}`;
+  if (type === "pdf") return `Book Excerpt ${index + 1}`;
+  return `Excerpt ${index + 1}`;
+}
+
 /** Monta o bloco de contexto que acompanha a pergunta do usuario. */
 export function buildContextBlock(chunks: ContextChunk[]): string {
   if (chunks.length === 0) {
@@ -53,7 +60,7 @@ export function buildContextBlock(chunks: ContextChunk[]): string {
   return chunks
     .map((chunk, index) => {
       const isStory = chunk.type === "story";
-      const label = isStory ? `Baba Story ${index + 1}` : `Excerpt ${index + 1}`;
+      const label = chunkLabel(chunk.type, index + 1);
       const ref = [
         chunk.title,
         chunk.author && isStory ? `Told by: ${chunk.author}` : null,
@@ -74,5 +81,5 @@ export function buildUserMessage(
   language: SupportedLanguage,
 ): string {
   const responseLanguage = RESPONSE_LANGUAGE[language];
-  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nRESPONSE LANGUAGE: ${responseLanguage}\n\nWrite your entire answer in ${responseLanguage}, even if the context excerpts are written in another language. Be brief and objective. When Baba Stories in the context are relevant, use them as the main examples. Do not list sources or add reading suggestions.`;
+  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nRESPONSE LANGUAGE: ${responseLanguage}\n\nWrite your entire answer in ${responseLanguage}, even if the context excerpts are written in another language. Base your answer primarily on book excerpts, citations, and transcripts. Use Baba Stories only as brief supporting examples when they clearly relate to the question. Be brief and objective. Do not list sources or add reading suggestions.`;
 }

@@ -6,7 +6,7 @@ export interface ScoredChunk extends RetrievedChunk {
   finalScore: number;
 }
 
-const STORY_SCORE_BOOST = 1.25;
+const MAX_STORY_CHUNKS = 2;
 
 /**
  * Recupera os chunks mais relevantes combinando busca vetorial e textual,
@@ -36,11 +36,8 @@ function combineScores(chunks: RetrievedChunk[]): ScoredChunk[] {
     .map((c) => {
       const vNorm = c.vectorScore / maxVector;
       const tNorm = c.textScore / maxText;
-      let finalScore =
+      const finalScore =
         config.hybridVectorWeight * vNorm + config.hybridTextWeight * tNorm;
-      if (c.type === "story") {
-        finalScore *= STORY_SCORE_BOOST;
-      }
       return { ...c, finalScore };
     })
     .sort((a, b) => b.finalScore - a.finalScore);
@@ -62,15 +59,19 @@ function applyLimits(chunks: ScoredChunk[], maxContextTokens: number): ScoredChu
   const budget = Math.floor(maxContextTokens * 0.5);
   const selected: ScoredChunk[] = [];
   let used = 0;
+  let storyCount = 0;
 
   for (const chunk of chunks) {
     if (selected.length >= config.retrievalMaxChunks) break;
+    if (chunk.type === "story" && storyCount >= MAX_STORY_CHUNKS) continue;
+
     const tokens = estimateTokens(chunk.content);
     if (used + tokens > budget && selected.length >= config.retrievalMinChunks) {
       break;
     }
     selected.push(chunk);
     used += tokens;
+    if (chunk.type === "story") storyCount++;
   }
 
   return selected;
