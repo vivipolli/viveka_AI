@@ -1,5 +1,4 @@
 import type { DocumentType, SourceReference, SupportedLanguage } from "shared";
-import { isPrimarySourceType } from "./source-types.js";
 
 export interface PrimarySource {
   documentId: string;
@@ -134,35 +133,10 @@ export function buildReadingSuggestion(
   return TEMPLATES[lang].replace("{ref}", ref);
 }
 
-export function primarySourceFromChunks(
-  chunks: Array<{
-    documentId: string;
-    title: string;
-    author?: string | null;
-    chapter?: string | null;
-    page?: number | null;
-    type: string;
-    finalScore?: number;
-  }>,
-): PrimarySource | undefined {
-  const top =
-    chunks.find((chunk) => isPrimarySourceType(chunk.type)) ?? chunks[0];
-  if (!top) return undefined;
-  return {
-    documentId: top.documentId,
-    title: top.title,
-    author: top.author ?? undefined,
-    chapter: top.chapter ?? undefined,
-    page: top.page ?? undefined,
-    type: top.type as DocumentType,
-  };
-}
-
 export function primarySourceFromReferences(
   sources: SourceReference[],
 ): PrimarySource | undefined {
-  const top =
-    sources.find((source) => isPrimarySourceType(source.type)) ?? sources[0];
+  const top = sources[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,
@@ -172,32 +146,4 @@ export function primarySourceFromReferences(
     page: top.page,
     type: top.type,
   };
-}
-
-/** Reduz fontes salvas em cache para a principal (e no maximo mais uma). */
-export function filterCitationSources(
-  sources: SourceReference[],
-): SourceReference[] {
-  if (sources.length === 0) return [];
-
-  const primaryPool = sources.filter((source) => isPrimarySourceType(source.type));
-  const pool = primaryPool.length > 0 ? primaryPool : sources;
-  const primary = primarySourceFromReferences(pool);
-  if (!primary) return pool.slice(0, 1);
-
-  const primaryRef =
-    pool.find(
-      (source) =>
-        source.documentId === primary.documentId &&
-        (source.chapter ?? "") === (primary.chapter ?? "") &&
-        (source.page ?? null) === (primary.page ?? null),
-    ) ?? pool.find((source) => source.documentId === primary.documentId);
-
-  if (!primaryRef) return [];
-
-  const secondary = pool.find(
-    (source) => source.documentId !== primary.documentId,
-  );
-
-  return secondary ? [primaryRef, secondary] : [primaryRef];
 }

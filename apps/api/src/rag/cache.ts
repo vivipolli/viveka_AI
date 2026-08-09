@@ -1,4 +1,4 @@
-import type { SourceReference, SupportedLanguage } from "shared";
+import type { SourceReference } from "shared";
 import { config } from "../config.js";
 import { query, toVectorLiteral } from "../database/client.js";
 
@@ -14,7 +14,6 @@ export interface CachedAnswer {
  */
 export async function findCachedAnswer(
   embedding: number[],
-  language: SupportedLanguage,
 ): Promise<CachedAnswer | null> {
   if (!config.cacheEnabled) return null;
 
@@ -30,10 +29,9 @@ export async function findCachedAnswer(
             1 - (question_embedding <=> $1::vector) AS similarity
      FROM response_cache
      WHERE question_embedding IS NOT NULL
-       AND language = $2
      ORDER BY question_embedding <=> $1::vector
      LIMIT 1`,
-    [toVectorLiteral(embedding), language],
+    [toVectorLiteral(embedding)],
   );
 
   const row = result.rows[0];
@@ -55,7 +53,7 @@ export async function saveCachedAnswer(params: {
   answer: string;
   sources: SourceReference[];
   readingSuggestion?: string;
-  language: SupportedLanguage;
+  language: string;
 }): Promise<void> {
   if (!config.cacheEnabled) return;
 

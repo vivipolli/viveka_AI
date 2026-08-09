@@ -1,6 +1,6 @@
 import { config } from "../config.js";
 import { estimateTokens } from "../lib/tokens.js";
-import { PRIMARY_SOURCE_TYPES } from "./source-types.js";
+import { isPrimarySourceType } from "./source-types.js";
 import { hybridSearchRaw, type RetrievedChunk } from "../vector/store.js";
 
 export interface ScoredChunk extends RetrievedChunk {
@@ -8,6 +8,9 @@ export interface ScoredChunk extends RetrievedChunk {
 }
 
 const KEYWORD_BOOST_WEIGHT = 0.35;
+const MAX_STORY_CHUNKS = 2;
+const STORY_MIN_RELATIVE_SCORE = 0.45;
+
 const QUERY_STOPWORDS = new Set([
   "what",
   "how",
@@ -49,9 +52,8 @@ const QUERY_STOPWORDS = new Set([
 ]);
 
 /**
- * Recupera os chunks mais relevantes combinando busca vetorial e textual.
- * Prioriza livros, citacoes e transcricoes; historias so entram se nao houver
- * material primario relevante.
+ * Recupera chunks relevantes. Livros, citacoes e transcricoes formam a base;
+ * historias entram como complemento quando forem relevantes.
  */
 export async function retrieveChunks(
   embedding: number[],
@@ -62,20 +64,44 @@ export async function retrieveChunks(
   const queryTerms = extractQueryTerms(questionText);
 
   const primaryRaw = await hybridSearchRaw(embedding, questionText, candidateLimit, {
-    types: [...PRIMARY_SOURCE_TYPES],
+    types: ["pdf", "citation", "transcript"],
   });
   const primaryRanked = rankChunks(primaryRaw, queryTerms);
-  const primarySelected = applyLimits(primaryRanked, maxContextTokens);
-
-  if (primarySelected.length > 0) {
-    return primarySelected;
-  }
 
   const storyRaw = await hybridSearchRaw(embedding, questionText, candidateLimit, {
     types: ["story"],
   });
   const storyRanked = rankChunks(storyRaw, queryTerms);
-  return applyLimits(storyRanked, maxContextTokens);
+
+  return mergeContextChunks(primaryRanked, storyRanked, maxContextTokens);
+}
+
+function mergeContextChunks(
+  primary: ScoredChunk[],
+  stories: ScoredChunk[],
+  maxContextTokens: number,
+): ScoredChunk[] {
+  if (primary.length === 0) {
+    return applyLimits(stories, maxContextTokens);
+  }
+
+  const primaryBudget = Math.max(config.retrievalMaxChunks - MAX_STORY_CHUNKS, config.retrievalMinChunks);
+  const primarySelected = applyLimits(primary, maxContextTokens, primaryBudget);
+
+  const topPrimaryScore = primarySelected[0]?.finalScore ?? 0;
+  const minStoryScore = Math.max(0.2, topPrimaryScore * STORY_MIN_RELATIVE_SCORE);
+  const storyCandidates = stories
+    .filter((chunk) => chunk.finalScore >= minStoryScore)
+    .slice(0, MAX_STORY_CHUNKS);
+
+  const combined = [...primarySelected, ...storyCandidates];
+
+  return combined.sort((a, b) => {
+    const aPrimary = isPrimarySourceType(a.type) ? 1 : 0;
+    const bPrimary = isPrimarySourceType(b.type) ? 1 : 0;
+    if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+    return b.finalScore - a.finalScore;
+  });
 }
 
 function rankChunks(chunks: RetrievedChunk[], queryTerms: string[]): ScoredChunk[] {
@@ -103,7 +129,6 @@ function keywordMatchBoost(terms: string[], content: string): number {
   return hits / terms.length;
 }
 
-/** Normaliza os scores vetorial e textual para [0,1] e combina por peso. */
 function combineScores(chunks: RetrievedChunk[], queryTerms: string[]): ScoredChunk[] {
   const maxVector = Math.max(...chunks.map((c) => c.vectorScore), 1e-6);
   const maxText = Math.max(...chunks.map((c) => c.textScore), 1e-6);
@@ -126,13 +151,17 @@ function rerank(chunks: ScoredChunk[]): ScoredChunk[] {
   return [...chunks].sort((a, b) => b.finalScore - a.finalScore);
 }
 
-function applyLimits(chunks: ScoredChunk[], maxContextTokens: number): ScoredChunk[] {
+function applyLimits(
+  chunks: ScoredChunk[],
+  maxContextTokens: number,
+  maxChunks = config.retrievalMaxChunks,
+): ScoredChunk[] {
   const budget = Math.floor(maxContextTokens * 0.5);
   const selected: ScoredChunk[] = [];
   let used = 0;
 
   for (const chunk of chunks) {
-    if (selected.length >= config.retrievalMaxChunks) break;
+    if (selected.length >= maxChunks) break;
 
     const tokens = estimateTokens(chunk.content);
     if (used + tokens > budget && selected.length >= config.retrievalMinChunks) {
