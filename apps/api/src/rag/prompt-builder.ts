@@ -11,6 +11,7 @@ import {
   primarySourceFromChunks,
   type PrimarySource,
 } from "./reading-suggestion.js";
+import { isPrimarySourceType } from "./source-types.js";
 import type { ScoredChunk } from "./retriever.js";
 
 export interface BuiltPrompt {
@@ -69,8 +70,11 @@ function chunkToSource(chunk: ScoredChunk): SourceReference {
 function selectCitationSources(chunks: ScoredChunk[]): SourceReference[] {
   if (chunks.length === 0) return [];
 
+  const citationPool = chunks.filter((chunk) => isPrimarySourceType(chunk.type));
+  const pool = citationPool.length > 0 ? citationPool : chunks;
+
   const bestByDocument = new Map<string, ScoredChunk>();
-  for (const chunk of chunks) {
+  for (const chunk of pool) {
     const existing = bestByDocument.get(chunk.documentId);
     if (!existing || chunk.finalScore > existing.finalScore) {
       bestByDocument.set(chunk.documentId, chunk);

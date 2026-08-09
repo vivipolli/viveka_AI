@@ -1,4 +1,5 @@
 import type { DocumentType, SourceReference, SupportedLanguage } from "shared";
+import { isPrimarySourceType } from "./source-types.js";
 
 export interface PrimarySource {
   documentId: string;
@@ -144,7 +145,8 @@ export function primarySourceFromChunks(
     finalScore?: number;
   }>,
 ): PrimarySource | undefined {
-  const top = chunks[0];
+  const top =
+    chunks.find((chunk) => isPrimarySourceType(chunk.type)) ?? chunks[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,
@@ -159,7 +161,8 @@ export function primarySourceFromChunks(
 export function primarySourceFromReferences(
   sources: SourceReference[],
 ): PrimarySource | undefined {
-  const top = sources[0];
+  const top =
+    sources.find((source) => isPrimarySourceType(source.type)) ?? sources[0];
   if (!top) return undefined;
   return {
     documentId: top.documentId,
@@ -177,20 +180,22 @@ export function filterCitationSources(
 ): SourceReference[] {
   if (sources.length === 0) return [];
 
-  const primary = primarySourceFromReferences(sources);
-  if (!primary) return sources.slice(0, 1);
+  const primaryPool = sources.filter((source) => isPrimarySourceType(source.type));
+  const pool = primaryPool.length > 0 ? primaryPool : sources;
+  const primary = primarySourceFromReferences(pool);
+  if (!primary) return pool.slice(0, 1);
 
   const primaryRef =
-    sources.find(
+    pool.find(
       (source) =>
         source.documentId === primary.documentId &&
         (source.chapter ?? "") === (primary.chapter ?? "") &&
         (source.page ?? null) === (primary.page ?? null),
-    ) ?? sources.find((source) => source.documentId === primary.documentId);
+    ) ?? pool.find((source) => source.documentId === primary.documentId);
 
   if (!primaryRef) return [];
 
-  const secondary = sources.find(
+  const secondary = pool.find(
     (source) => source.documentId !== primary.documentId,
   );
 

@@ -42,6 +42,30 @@ export async function insertChunks(chunks: ChunkInsert[]): Promise<void> {
   }
 }
 
+export interface HybridSearchOptions {
+  types?: string[];
+  excludeTypes?: string[];
+}
+
+function buildDocumentTypeFilter(
+  options: HybridSearchOptions | undefined,
+  paramIndex: number,
+): { clause: string; params: string[][] } {
+  if (options?.types?.length) {
+    return {
+      clause: `AND d.type = ANY($${paramIndex}::text[])`,
+      params: [options.types],
+    };
+  }
+  if (options?.excludeTypes?.length) {
+    return {
+      clause: `AND d.type <> ALL($${paramIndex}::text[])`,
+      params: [options.excludeTypes],
+    };
+  }
+  return { clause: "", params: [] };
+}
+
 /**
  * Busca hibrida: combina similaridade vetorial (pgvector) e full-text
  * (tsvector) em uma unica consulta, retornando os candidatos brutos.
@@ -50,12 +74,24 @@ export async function hybridSearchRaw(
   embedding: number[],
   questionText: string,
   candidateLimit: number,
+  options?: HybridSearchOptions,
 ): Promise<RetrievedChunk[]> {
+  const typeFilter = buildDocumentTypeFilter(options, 4);
+  const params: unknown[] = [
+    toVectorLiteral(embedding),
+    questionText,
+    candidateLimit,
+    ...typeFilter.params,
+  ];
+
   const result = await query<RetrievedChunk & { vectorscore: number; textscore: number }>(
     `WITH vector_search AS (
        SELECT c.id, 1 - (c.embedding <=> $1::vector) AS vscore
        FROM document_chunks c
+       JOIN documents d ON d.id = c.document_id
        WHERE c.embedding IS NOT NULL
+         AND d.status = 'indexed'
+         ${typeFilter.clause}
        ORDER BY c.embedding <=> $1::vector
        LIMIT $3
      ),
@@ -63,7 +99,10 @@ export async function hybridSearchRaw(
        SELECT c.id,
               ts_rank(c.content_tsv, plainto_tsquery('simple', $2)) AS tscore
        FROM document_chunks c
+       JOIN documents d ON d.id = c.document_id
        WHERE c.content_tsv @@ plainto_tsquery('simple', $2)
+         AND d.status = 'indexed'
+         ${typeFilter.clause}
        ORDER BY tscore DESC
        LIMIT $3
      ),
@@ -88,7 +127,7 @@ export async function hybridSearchRaw(
      JOIN documents d ON d.id = c.document_id
      LEFT JOIN vector_search v ON v.id = cb.id
      LEFT JOIN text_search t ON t.id = cb.id`,
-    [toVectorLiteral(embedding), questionText, candidateLimit],
+    params,
   );
 
   return result.rows;

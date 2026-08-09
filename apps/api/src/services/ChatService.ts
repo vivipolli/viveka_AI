@@ -18,6 +18,7 @@ import {
   primarySourceFromReferences,
 } from "../rag/reading-suggestion.js";
 import { retrieveChunks } from "../rag/retriever.js";
+import { isPrimarySourceType } from "../rag/source-types.js";
 
 export interface ChatParams {
   sessionId?: string;
@@ -50,7 +51,7 @@ export async function* handleChat(
   const language = detectQuestionLanguage(question);
 
   const cached = await findCachedAnswer(embedding, language);
-  if (cached) {
+  if (cached && isCacheUsable(question, cached.sources)) {
     const sources = filterCitationSources(cached.sources);
     const readingSuggestion =
       cached.readingSuggestion ??
@@ -157,4 +158,14 @@ async function resolveConversation(
     return conversationId;
   }
   return createConversation(sessionId, question);
+}
+
+function isCacheUsable(question: string, sources: SourceReference[]): boolean {
+  if (sources.some((source) => isPrimarySourceType(source.type))) return true;
+  if (sources.length === 0) return true;
+
+  const storyOnly = sources.every((source) => source.type === "story");
+  if (!storyOnly) return true;
+
+  return !/\b[\p{L}]{5,}\b/u.test(question);
 }
