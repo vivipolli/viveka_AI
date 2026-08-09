@@ -37,13 +37,13 @@ export function consumeStreamToken(
     return delta.length > 0 ? delta : null;
   }
 
-  const safeEnd = findSafeYieldEnd(state.buffer, state.displayedLength);
+  const safeEnd = findSafeYieldEnd(state.buffer);
   const delta = state.buffer.slice(state.displayedLength, safeEnd);
   state.displayedLength = safeEnd;
   return delta.length > 0 ? delta : null;
 }
 
-function findSafeYieldEnd(buffer: string, displayedLength: number): number {
+function findSafeYieldEnd(buffer: string): number {
   const marker = METADATA_MARKER;
   for (let i = 1; i < marker.length; i++) {
     const partial = marker.slice(0, i);
