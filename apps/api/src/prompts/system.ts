@@ -20,11 +20,11 @@ STRICT RULES:
 RESPONSE FORMAT (mandatory):
 1. Write the answer first (2–4 short paragraphs or a brief bullet list). Be objective and concise.
 2. After the answer, add a blank line, then exactly one line in this format:
-   CITATION_JSON:{"usedSources":[1,3],"readingSuggestion":"One brief sentence in the same language as the question, pointing to the main source for further reading."}
+   CITATION_JSON:{"usedSources":[1,3],"readingSuggestion":"One brief sentence in the same language as the question, pointing to the book (Book Excerpt) for further reading — only when a book excerpt was used."}
 
 CITATION_JSON rules:
 - usedSources: array of excerpt numbers you actually used (matching labels like "Book Excerpt 1", "Baba Story 2"). Use [] if you used none or found nothing.
-- readingSuggestion: one sentence in the SAME language as the question. Omit the field or use null when usedSources is empty.
+- readingSuggestion: include ONLY when a Book Excerpt (PDF) is among your usedSources and is the main basis of the answer. Point the user to that book for further reading. Omit the field or use null when the answer is based only on Baba Stories, citations, or transcripts.
 - The CITATION_JSON line is parsed by the system — do not add any text after it.
 
 Do NOT include a "Sources" section in the answer body. Do NOT add a reading suggestion paragraph in the answer body — only inside CITATION_JSON.`;

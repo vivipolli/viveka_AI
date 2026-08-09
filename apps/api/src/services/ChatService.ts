@@ -17,9 +17,8 @@ import {
 } from "../rag/citation-parser.js";
 import { buildPrompt } from "../rag/prompt-builder.js";
 import {
-  buildReadingSuggestion,
   notFoundMessage,
-  primarySourceFromReferences,
+  resolveReadingSuggestion,
 } from "../rag/reading-suggestion.js";
 import { retrieveChunks } from "../rag/retriever.js";
 
@@ -54,14 +53,11 @@ export async function* handleChat(
 
   const cached = await findCachedAnswer(embedding);
   if (cached) {
-    const readingSuggestion =
-      cached.readingSuggestion ??
-      (cached.sources.length > 0
-        ? buildReadingSuggestion(
-            primarySourceFromReferences(cached.sources),
-            question,
-          )
-        : undefined);
+    const readingSuggestion = resolveReadingSuggestion(
+      cached.sources,
+      cached.readingSuggestion,
+      question,
+    );
 
     yield { type: "cached", cached: true };
     yield { type: "token", value: cached.answer };
@@ -118,11 +114,11 @@ export async function* handleChat(
 
   const parsed = parseChatResponse(streamState.buffer);
   const sources = resolveSourcesFromIndices(parsed.usedSourceIndices, prompt.chunks);
-  const readingSuggestion =
-    parsed.readingSuggestion ??
-    (sources.length > 0
-      ? buildReadingSuggestion(primarySourceFromReferences(sources), question)
-      : undefined);
+  const readingSuggestion = resolveReadingSuggestion(
+    sources,
+    parsed.readingSuggestion,
+    question,
+  );
 
   if (readingSuggestion) {
     yield { type: "readingSuggestion", text: readingSuggestion };

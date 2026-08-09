@@ -122,12 +122,12 @@ const TEMPLATES: Record<SupportedLanguage, string> = {
   bn: "এই উত্তর প্রধানত {ref} থেকে নেওয়া হয়েছে। সরাসরি এই অংশ পড়লে আপনার বোঝাপড়া আরও গভীর হতে পারে।",
 };
 
-/** Gera sugestao de leitura apontando a fonte principal (trecho mais relevante). */
+/** Gera sugestao de leitura apontando ao livro (PDF) usado na resposta. */
 export function buildReadingSuggestion(
   source: PrimarySource | undefined,
   question: string,
 ): string | undefined {
-  if (!source) return undefined;
+  if (!source || source.type !== "pdf") return undefined;
   const lang = detectQuestionLanguage(question);
   const ref = formatRef(source, lang);
   return TEMPLATES[lang].replace("{ref}", ref);
@@ -138,12 +138,35 @@ export function primarySourceFromReferences(
 ): PrimarySource | undefined {
   const top = sources[0];
   if (!top) return undefined;
+  return toPrimarySource(top);
+}
+
+function toPrimarySource(source: SourceReference): PrimarySource {
   return {
-    documentId: top.documentId,
-    title: top.title,
-    author: top.author,
-    chapter: top.chapter,
-    page: top.page,
-    type: top.type,
+    documentId: source.documentId,
+    title: source.title,
+    author: source.author,
+    chapter: source.chapter,
+    page: source.page,
+    type: source.type,
   };
+}
+
+/**
+ * Sugestao de leitura so para respostas baseadas em livro (PDF).
+ * Historias, citacoes e transcricoes aparecem apenas em Fontes.
+ */
+export function resolveReadingSuggestion(
+  sources: SourceReference[],
+  llmSuggestion: string | undefined,
+  question: string,
+): string | undefined {
+  const bookSource = sources.find((source) => source.type === "pdf");
+  if (!bookSource) return undefined;
+
+  if (llmSuggestion?.trim()) {
+    return llmSuggestion.trim();
+  }
+
+  return buildReadingSuggestion(toPrimarySource(bookSource), question);
 }
