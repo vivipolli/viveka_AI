@@ -2,7 +2,7 @@ import type { DocumentType, SourceReference } from "shared";
 import { makeExcerpt } from "../lib/text.js";
 import type { ScoredChunk } from "./retriever.js";
 
-const METADATA_MARKER = "\nCITATION_JSON:";
+const METADATA_MARKERS = ["\nCITATION_JSON:", "CITATION_JSON:"] as const;
 
 export interface ParsedChatResponse {
   answer: string;
@@ -20,6 +20,18 @@ export function createStreamParseState(): StreamParseState {
   return { buffer: "", displayedLength: 0, metadataStarted: false };
 }
 
+function findMetadataMarker(text: string): { index: number; marker: string } | null {
+  let best: { index: number; marker: string } | null = null;
+  for (const marker of METADATA_MARKERS) {
+    const index = text.indexOf(marker);
+    if (index < 0) continue;
+    if (!best || index < best.index) {
+      best = { index, marker };
+    }
+  }
+  return best;
+}
+
 /** Tokens visiveis ao usuario, segurando possivel inicio do bloco de metadados. */
 export function consumeStreamToken(
   state: StreamParseState,
@@ -29,9 +41,9 @@ export function consumeStreamToken(
 
   if (state.metadataStarted) return null;
 
-  const markerIdx = state.buffer.indexOf(METADATA_MARKER);
-  if (markerIdx >= 0) {
-    const visible = state.buffer.slice(0, markerIdx);
+  const found = findMetadataMarker(state.buffer);
+  if (found) {
+    const visible = state.buffer.slice(0, found.index);
     const delta = visible.slice(state.displayedLength);
     state.displayedLength = visible.length;
     state.metadataStarted = true;
@@ -45,31 +57,32 @@ export function consumeStreamToken(
 }
 
 function findSafeYieldEnd(buffer: string): number {
-  const marker = METADATA_MARKER;
-  for (let i = 1; i < marker.length; i++) {
-    const partial = marker.slice(0, i);
-    if (buffer.endsWith(partial)) {
-      return buffer.length - partial.length;
+  let hold = 0;
+  for (const marker of METADATA_MARKERS) {
+    for (let i = 1; i < marker.length; i++) {
+      const partial = marker.slice(0, i);
+      if (buffer.endsWith(partial)) {
+        hold = Math.max(hold, partial.length);
+      }
     }
   }
-  return buffer.length;
+  return buffer.length - hold;
 }
 
 export function parseChatResponse(raw: string): ParsedChatResponse {
-  const markerIdx = raw.indexOf(METADATA_MARKER);
-  if (markerIdx < 0) {
+  const found = findMetadataMarker(raw);
+  if (!found) {
     return parseFallbackMetadata(raw);
   }
 
-  const answer = raw.slice(0, markerIdx).trim();
-  const jsonPart = raw.slice(markerIdx + METADATA_MARKER.length).trim();
-
+  const answer = raw.slice(0, found.index).trim();
+  const jsonPart = raw.slice(found.index + found.marker.length).trim();
   return parseMetadataJson(answer, jsonPart);
 }
 
 function parseFallbackMetadata(raw: string): ParsedChatResponse {
-  const match = raw.match(/\nCITATION_JSON\s*:\s*(\{[\s\S]*\})\s*$/i);
-  if (!match) {
+  const match = raw.match(/(?:\n)?CITATION_JSON\s*:\s*(\{[\s\S]*\})\s*$/i);
+  if (!match || match.index === undefined) {
     return { answer: raw.trim(), usedSourceIndices: [] };
   }
 

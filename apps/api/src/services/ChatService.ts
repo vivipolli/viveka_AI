@@ -21,10 +21,9 @@ import {
 import {
   buildPrompt,
   buildRetrievalQuery,
-  TOPIC_CONTINUATION_THRESHOLD,
+  shouldEnrichRetrieval,
   topicAnchorTexts,
 } from "../rag/prompt-builder.js";
-import { cosineSimilarity } from "../rag/similarity.js";
 import {
   notFoundMessage,
   resolveReadingSuggestion,
@@ -218,8 +217,5 @@ async function isSameTopic(
   if (anchors.length === 0) return false;
 
   const anchorEmbeddings = await embedder.embedBatch(anchors);
-  const best = Math.max(
-    ...anchorEmbeddings.map((vector) => cosineSimilarity(questionEmbedding, vector)),
-  );
-  return best >= TOPIC_CONTINUATION_THRESHOLD;
+  return shouldEnrichRetrieval(questionEmbedding, anchorEmbeddings);
 }

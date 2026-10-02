@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ChatMessage } from "shared";
 import { fetchMessages, streamChat } from "../lib/api.js";
 
@@ -23,9 +23,13 @@ export function useChat(
   const [cached, setCached] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
+  // Ref evita perder conversationId por closure stale entre turnos.
+  const conversationIdRef = useRef<string | undefined>(undefined);
+  const isStreamingRef = useRef(false);
+
   const sendMessage = useCallback(
     async (question: string) => {
-      if (!sessionId || isStreaming) return;
+      if (!sessionId || isStreamingRef.current) return;
 
       setErrorKey(null);
       setCached(false);
@@ -44,16 +48,19 @@ export function useChat(
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      isStreamingRef.current = true;
       setIsStreaming(true);
 
-      const isNewConversation = !conversationId;
+      const activeConversationId = conversationIdRef.current;
+      const isNewConversation = !activeConversationId;
 
       await streamChat(
-        { sessionId, conversationId, question },
+        { sessionId, conversationId: activeConversationId, question },
         {
           onEvent: (event) => {
             switch (event.type) {
               case "meta":
+                conversationIdRef.current = event.conversationId;
                 setConversationId(event.conversationId);
                 break;
               case "token":
@@ -81,11 +88,13 @@ export function useChat(
                 setCached(true);
                 break;
               case "done":
+                isStreamingRef.current = false;
                 setIsStreaming(false);
                 if (isNewConversation) onConversationCreated();
                 break;
               case "error":
                 setErrorKey("chat.errors.generic");
+                isStreamingRef.current = false;
                 setIsStreaming(false);
                 break;
             }
@@ -94,17 +103,19 @@ export function useChat(
             setErrorKey(
               status === 429 ? "chat.errors.rateLimit" : "chat.errors.generic",
             );
+            isStreamingRef.current = false;
             setIsStreaming(false);
           },
         },
       );
     },
-    [sessionId, conversationId, isStreaming, onConversationCreated],
+    [sessionId, onConversationCreated],
   );
 
   const loadConversation = useCallback(
     async (id: string) => {
       if (!sessionId) return;
+      conversationIdRef.current = id;
       setConversationId(id);
       setCached(false);
       setErrorKey(null);
@@ -115,6 +126,7 @@ export function useChat(
   );
 
   const startNew = useCallback(() => {
+    conversationIdRef.current = undefined;
     setConversationId(undefined);
     setMessages([]);
     setCached(false);
