@@ -13,21 +13,7 @@ export class GeminiLLMProvider implements LLMProvider {
   }
 
   async *generateStream(params: LLMGenerateParams): AsyncIterable<string> {
-    const model = this.client.getGenerativeModel({
-      model: this.model,
-      systemInstruction: params.system,
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: config.llmMaxOutputTokens,
-      },
-    });
-
-    const history = (params.history ?? []).map((turn) => ({
-      role: turn.role === "assistant" ? "model" : "user",
-      parts: [{ text: turn.content }],
-    }));
-
-    const chat = model.startChat({ history });
+    const chat = this.startChat(params);
     const result = await chat.sendMessageStream(params.user);
 
     for await (const chunk of result.stream) {
@@ -36,7 +22,31 @@ export class GeminiLLMProvider implements LLMProvider {
     }
   }
 
+  async generateComplete(params: LLMGenerateParams): Promise<string> {
+    const chat = this.startChat(params);
+    const result = await chat.sendMessage(params.user);
+    return result.response.text().trim();
+  }
+
   getMaxContextTokens(): number {
     return 1_000_000;
+  }
+
+  private startChat(params: LLMGenerateParams) {
+    const model = this.client.getGenerativeModel({
+      model: this.model,
+      systemInstruction: params.system,
+      generationConfig: {
+        temperature: params.temperature ?? 0.2,
+        maxOutputTokens: params.maxTokens ?? config.llmMaxOutputTokens,
+      },
+    });
+
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role === "assistant" ? "model" : "user",
+      parts: [{ text: turn.content }],
+    }));
+
+    return model.startChat({ history });
   }
 }

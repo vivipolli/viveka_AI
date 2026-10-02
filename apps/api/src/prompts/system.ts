@@ -13,9 +13,11 @@ STRICT RULES:
 - Answer ONLY using the information present in the provided context. Never use outside knowledge to define concepts.
 - If the information does not exist in the context, say clearly that it was not found.
 - Write your entire answer in the SAME language as the user's question (e.g. Bengali, Hindi, Portuguese, English, Spanish, or any other language they use).
-- When PREVIOUS CONVERSATION / message history is present, resolve follow-ups ("this", "that", "explain more", pronouns) using that history. Keep continuity.
-- If the latest question is clearly a new topic, answer that topic and do not drag in the previous subject.
-- Still ground every factual claim in the provided CONTEXT excerpts.
+- When PREVIOUS CONVERSATION is present, use your own judgment to decide if the latest question continues that exchange or starts a new topic.
+- If it continues, resolve any incomplete references from the prior turns before answering.
+- If it is a new topic, answer that topic and do not drag the previous subject in.
+- CONTEXT is evidence for grounding facts — not a license to reinterpret the user's intent away from the conversation.
+- Still ground every factual claim in the provided CONTEXT excerpts. If CONTEXT lacks needed details after resolving the question, say clearly what was not found.
 - For conceptual, doctrinal, or explanatory questions, base your answer primarily on book excerpts (PDF), citations, and transcripts.
 - Baba Stories may complement the answer as brief illustrations when they clearly support what the books teach — never replace book-based explanations.
 - Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
@@ -99,16 +101,33 @@ export function formatConversationHistory(
     .join("\n\n");
 }
 
-/** Monta a mensagem do usuario combinando historico, contexto e pergunta. */
+/** Monta a mensagem do usuario combinando historico, pergunta e contexto. */
 export function buildUserMessage(
   question: string,
   contextBlock: string,
   history: ChatTurn[] = [],
 ): string {
   const previous = formatConversationHistory(history);
-  const historySection = previous
-    ? `PREVIOUS CONVERSATION:\n${previous}\n\n---\n\n`
-    : "";
+  if (!previous) {
+    return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nAnswer in the same language as the question above. Explain the subject in useful detail (not a one-line summary, not a long essay). Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
+  }
 
-  return `${historySection}CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nAnswer in the same language as the question above. Explain the subject in useful detail (not a one-line summary, not a long essay). If PREVIOUS CONVERSATION is present, treat this as a follow-up and keep continuity unless the question is clearly a new topic. Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
+  return `PREVIOUS CONVERSATION:
+${previous}
+
+---
+
+QUESTION:
+${question}
+
+Decide for yourself whether this question continues the previous conversation or starts a new topic. If it continues, keep that continuity. If it is new, ignore the previous subject.
+
+---
+
+CONTEXT:
+${contextBlock}
+
+---
+
+Answer in the same language as the question above. Explain the subject in useful detail (not a one-line summary, not a long essay). Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
 }

@@ -20,8 +20,8 @@ export class ClaudeLLMProvider implements LLMProvider {
 
     const stream = this.client.messages.stream({
       model: this.model,
-      max_tokens: config.llmMaxOutputTokens,
-      temperature: 0.2,
+      max_tokens: params.maxTokens ?? config.llmMaxOutputTokens,
+      temperature: params.temperature ?? 0.2,
       system: params.system,
       messages: [...history, { role: "user", content: params.user }],
     });
@@ -34,6 +34,27 @@ export class ClaudeLLMProvider implements LLMProvider {
         yield event.delta.text;
       }
     }
+  }
+
+  async generateComplete(params: LLMGenerateParams): Promise<string> {
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role,
+      content: turn.content,
+    }));
+
+    const response = await this.client.messages.create({
+      model: this.model,
+      max_tokens: params.maxTokens ?? config.llmMaxOutputTokens,
+      temperature: params.temperature ?? 0.2,
+      system: params.system,
+      messages: [...history, { role: "user", content: params.user }],
+    });
+
+    const text = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("");
+    return text.trim();
   }
 
   getMaxContextTokens(): number {

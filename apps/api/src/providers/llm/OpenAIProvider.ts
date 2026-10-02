@@ -13,21 +13,12 @@ export class OpenAILLMProvider implements LLMProvider {
   }
 
   async *generateStream(params: LLMGenerateParams): AsyncIterable<string> {
-    const history = (params.history ?? []).map((turn) => ({
-      role: turn.role,
-      content: turn.content,
-    }));
-
     const stream = await this.client.chat.completions.create({
       model: this.model,
-      temperature: 0.2,
-      max_tokens: config.llmMaxOutputTokens,
+      temperature: params.temperature ?? 0.2,
+      max_tokens: params.maxTokens ?? config.llmMaxOutputTokens,
       stream: true,
-      messages: [
-        { role: "system", content: params.system },
-        ...history,
-        { role: "user", content: params.user },
-      ],
+      messages: this.buildMessages(params),
     });
 
     for await (const chunk of stream) {
@@ -36,7 +27,30 @@ export class OpenAILLMProvider implements LLMProvider {
     }
   }
 
+  async generateComplete(params: LLMGenerateParams): Promise<string> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      temperature: params.temperature ?? 0.2,
+      max_tokens: params.maxTokens ?? config.llmMaxOutputTokens,
+      stream: false,
+      messages: this.buildMessages(params),
+    });
+    return response.choices[0]?.message?.content?.trim() ?? "";
+  }
+
   getMaxContextTokens(): number {
     return 128_000;
+  }
+
+  private buildMessages(params: LLMGenerateParams) {
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role,
+      content: turn.content,
+    }));
+    return [
+      { role: "system" as const, content: params.system },
+      ...history,
+      { role: "user" as const, content: params.user },
+    ];
   }
 }

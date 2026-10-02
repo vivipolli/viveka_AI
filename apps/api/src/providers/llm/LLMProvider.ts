@@ -10,6 +10,9 @@ export interface LLMGenerateParams {
   history?: ChatTurn[];
   /** Idioma alvo (dica; o modelo tambem infere pela pergunta). */
   language?: string;
+  /** Override do limite de tokens de saida (ex.: resolver curto). */
+  maxTokens?: number;
+  temperature?: number;
 }
 
 /**
@@ -21,6 +24,8 @@ export interface LLMProvider {
   readonly name: string;
   /** Emite a resposta token a token para streaming SSE. */
   generateStream(params: LLMGenerateParams): AsyncIterable<string>;
+  /** Resposta completa (nao streaming), para tarefas curtas auxiliares. */
+  generateComplete(params: LLMGenerateParams): Promise<string>;
   /** Limite de tokens de contexto suportado pelo modelo ativo. */
   getMaxContextTokens(): number;
 }

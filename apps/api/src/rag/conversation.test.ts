@@ -6,20 +6,10 @@ import {
   parseChatResponse,
   resolveSourcesFromIndices,
 } from "./citation-parser.js";
-import {
-  buildPrompt,
-  buildRetrievalQuery,
-  shouldEnrichRetrieval,
-  topicAnchorTexts,
-} from "./prompt-builder.js";
-import { cosineSimilarity } from "./similarity.js";
+import { buildPrompt } from "./prompt-builder.js";
+import { parseResolverOutput } from "./query-resolver.js";
 import type { ScoredChunk } from "./retriever.js";
 import { formatConversationHistory } from "../prompts/system.js";
-
-function unitVector(values: number[]): number[] {
-  const norm = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
-  return values.map((value) => value / norm);
-}
 
 function chunk(partial: Partial<ScoredChunk> & { content: string }): ScoredChunk {
   return {
@@ -38,32 +28,29 @@ function chunk(partial: Partial<ScoredChunk> & { content: string }): ScoredChunk
   };
 }
 
-describe("cosineSimilarity", () => {
-  it("returns 1 for identical vectors", () => {
-    const a = unitVector([1, 2, 3]);
-    assert.equal(Number(cosineSimilarity(a, a).toFixed(6)), 1);
+describe("parseResolverOutput", () => {
+  it("rewrites follow-up into a standalone search query", () => {
+    const resolved = parseResolverOutput(
+      '{"continuesPrevious":true,"searchQuery":"Quais sao os 16 Pontos de Ananda Marga?"}',
+      "Quais sao eles?",
+    );
+    assert.equal(resolved.continuesPrevious, true);
+    assert.match(resolved.searchQuery, /16 Pontos/);
   });
 
-  it("returns ~0 for orthogonal vectors", () => {
-    assert.ok(Math.abs(cosineSimilarity([1, 0], [0, 1])) < 1e-9);
-  });
-});
-
-describe("shouldEnrichRetrieval (topic continuity)", () => {
-  it("enriches when question is close to prior turn", () => {
-    const question = unitVector([0.9, 0.1, 0]);
-    const prior = unitVector([1, 0, 0]);
-    assert.equal(shouldEnrichRetrieval(question, [prior], 0.7), true);
+  it("keeps a new-topic question unchanged", () => {
+    const resolved = parseResolverOutput(
+      '{"continuesPrevious":false,"searchQuery":"O que e PROUT?"}',
+      "O que e PROUT?",
+    );
+    assert.equal(resolved.continuesPrevious, false);
+    assert.equal(resolved.searchQuery, "O que e PROUT?");
   });
 
-  it("does not enrich when topic changed", () => {
-    const question = unitVector([0, 0, 1]);
-    const prior = unitVector([1, 0, 0]);
-    assert.equal(shouldEnrichRetrieval(question, [prior], 0.7), false);
-  });
-
-  it("does not enrich without anchors", () => {
-    assert.equal(shouldEnrichRetrieval(unitVector([1, 0]), [], 0.7), false);
+  it("falls back to the original question when JSON is invalid", () => {
+    const resolved = parseResolverOutput("not json", "Quais sao eles?");
+    assert.equal(resolved.continuesPrevious, false);
+    assert.equal(resolved.searchQuery, "Quais sao eles?");
   });
 });
 
@@ -76,32 +63,23 @@ describe("conversation history helpers", () => {
     },
   ];
 
-  it("topicAnchorTexts uses last user and assistant turns", () => {
-    const anchors = topicAnchorTexts(history);
-    assert.equal(anchors.length, 2);
-    assert.match(anchors[0], /Prakrti/);
-    assert.match(anchors[1], /sattva/);
-  });
-
-  it("buildRetrievalQuery includes prior turns for follow-ups", () => {
-    const query = buildRetrievalQuery("explique melhor o sattva", history);
-    assert.match(query, /Prakrti/);
-    assert.match(query, /explique melhor o sattva/);
-  });
-
-  it("buildPrompt embeds previous conversation in the user message", () => {
+  it("buildPrompt puts PREVIOUS before QUESTION before CONTEXT", () => {
     const prompt = buildPrompt(
       "explique melhor o sattva",
       [chunk({ content: "Sattva is the sentient force of Prakrti." })],
       history,
     );
 
-    assert.match(prompt.user, /PREVIOUS CONVERSATION/);
+    const previousIdx = prompt.user.indexOf("PREVIOUS CONVERSATION");
+    const questionIdx = prompt.user.indexOf("QUESTION:");
+    const contextIdx = prompt.user.indexOf("CONTEXT:");
+
+    assert.ok(previousIdx >= 0);
+    assert.ok(questionIdx > previousIdx);
+    assert.ok(contextIdx > questionIdx);
     assert.match(prompt.user, /O que e Prakrti/);
     assert.match(prompt.user, /explique melhor o sattva/);
     assert.equal(prompt.history.length, 2);
-    assert.equal(prompt.history[0].role, "user");
-    assert.equal(prompt.history[1].role, "assistant");
   });
 
   it("formatConversationHistory keeps turn order", () => {
@@ -109,6 +87,15 @@ describe("conversation history helpers", () => {
     const userIdx = formatted.indexOf("User:");
     const assistantIdx = formatted.indexOf("Assistant:");
     assert.ok(userIdx >= 0 && assistantIdx > userIdx);
+  });
+
+  it("buildPrompt without history has no PREVIOUS section", () => {
+    const prompt = buildPrompt("O que e Prakrti?", [
+      chunk({ content: "Prakrti is the operative principle." }),
+    ]);
+    assert.equal(prompt.user.includes("PREVIOUS CONVERSATION"), false);
+    assert.match(prompt.user, /CONTEXT:/);
+    assert.match(prompt.user, /QUESTION:/);
   });
 });
 

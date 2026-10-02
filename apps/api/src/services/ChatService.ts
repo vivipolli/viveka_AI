@@ -8,7 +8,6 @@ import {
   listMessages,
 } from "../database/repositories/conversations.js";
 import { getEmbeddingProvider } from "../providers/embedding/index.js";
-import type { EmbeddingProvider } from "../providers/embedding/EmbeddingProvider.js";
 import { getLLMProvider } from "../providers/llm/index.js";
 import type { ChatTurn } from "../providers/llm/LLMProvider.js";
 import { findCachedAnswer, saveCachedAnswer } from "../rag/cache.js";
@@ -18,12 +17,8 @@ import {
   parseChatResponse,
   resolveSourcesFromIndices,
 } from "../rag/citation-parser.js";
-import {
-  buildPrompt,
-  buildRetrievalQuery,
-  shouldEnrichRetrieval,
-  topicAnchorTexts,
-} from "../rag/prompt-builder.js";
+import { buildPrompt } from "../rag/prompt-builder.js";
+import { resolveSearchQuery } from "../rag/query-resolver.js";
 import {
   notFoundMessage,
   resolveReadingSuggestion,
@@ -62,15 +57,17 @@ export async function* handleChat(
 
   await addMessage({ conversationId, role: "user", content: question });
 
+  const llm = getLLMProvider();
   const embedder = getEmbeddingProvider();
-  const questionEmbedding = await embedder.embed(question);
-  const sameTopic = await isSameTopic(questionEmbedding, priorHistory, embedder);
-  const retrievalText = sameTopic
-    ? buildRetrievalQuery(question, priorHistory)
-    : question;
-  const embedding = sameTopic
-    ? await embedder.embed(retrievalText)
-    : questionEmbedding;
+
+  // A propria IA decide continuidade e reescreve a query de busca se preciso.
+  const resolved =
+    priorHistory.length > 0
+      ? await resolveSearchQuery(question, priorHistory, llm)
+      : { searchQuery: question, continuesPrevious: false };
+
+  const retrievalText = resolved.searchQuery;
+  const embedding = await embedder.embed(retrievalText);
 
   // Cache semantico so em conversas novas; follow-ups dependem do historico.
   if (priorHistory.length === 0) {
@@ -103,7 +100,6 @@ export async function* handleChat(
     }
   }
 
-  const llm = getLLMProvider();
   const chunks = await retrieveChunks(
     embedding,
     retrievalText,
@@ -202,20 +198,4 @@ async function loadConversationHistory(
       role: message.role,
       content: message.content,
     }));
-}
-
-/**
- * Continua o mesmo tema se a pergunta atual for semanticamente proxima
- * da ultima pergunta ou da ultima resposta — independente do idioma.
- */
-async function isSameTopic(
-  questionEmbedding: number[],
-  history: ChatTurn[],
-  embedder: EmbeddingProvider,
-): Promise<boolean> {
-  const anchors = topicAnchorTexts(history);
-  if (anchors.length === 0) return false;
-
-  const anchorEmbeddings = await embedder.embedBatch(anchors);
-  return shouldEnrichRetrieval(questionEmbedding, anchorEmbeddings);
 }
