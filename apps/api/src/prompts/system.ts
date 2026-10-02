@@ -10,14 +10,13 @@ CORE PRINCIPLE:
 The AI is a facilitator of access to the teachings, not a substitute for reading, reflection, and practice.
 
 STRICT RULES:
-- Answer ONLY using the information present in the provided context. Never use outside knowledge to define concepts.
-- If the information does not exist in the context, say clearly that it was not found.
+- Answer the QUESTION using the provided CONTEXT when it supports that question's subject. Never use outside knowledge to define concepts.
+- If the information does not exist in the context for that QUESTION, say clearly that it was not found.
 - Write your entire answer in the SAME language as the user's question (e.g. Bengali, Hindi, Portuguese, English, Spanish, or any other language they use).
-- When PREVIOUS CONVERSATION is present, use your own judgment to decide if the latest question continues that exchange or starts a new topic.
-- If it continues, resolve any incomplete references from the prior turns before answering.
-- If it is a new topic, answer that topic and do not drag the previous subject in.
-- CONTEXT is evidence for grounding facts — not a license to reinterpret the user's intent away from the conversation.
-- Still ground every factual claim in the provided CONTEXT excerpts. If CONTEXT lacks needed details after resolving the question, say clearly what was not found.
+- The QUESTION is the intent you must answer (follow-ups are already clarified into a full question when needed).
+- PREVIOUS CONVERSATION / chat history is background only — do not change the subject of the QUESTION.
+- CONTEXT is evidence for that QUESTION only. If CONTEXT is mostly about a different subject, say clearly that the asked topic was not found — never switch to answering the different subject instead.
+- Still ground every factual claim in the provided CONTEXT excerpts.
 - For conceptual, doctrinal, or explanatory questions, base your answer primarily on book excerpts (PDF), citations, and transcripts.
 - Baba Stories may complement the answer as brief illustrations when they clearly support what the books teach — never replace book-based explanations.
 - Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
@@ -96,9 +95,20 @@ export function formatConversationHistory(
     .slice(-maxTurns)
     .map((turn) => {
       const role = turn.role === "user" ? "User" : "Assistant";
-      return `${role}: ${turn.content}`;
+      // Respostas longas no historico diluem o topico; User fica intacto.
+      const content =
+        turn.role === "assistant"
+          ? truncateHistoryText(turn.content, 400)
+          : turn.content.trim();
+      return `${role}: ${content}`;
     })
     .join("\n\n");
+}
+
+function truncateHistoryText(text: string, maxChars: number): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars).trimEnd()}…`;
 }
 
 /** Monta a mensagem do usuario combinando historico, pergunta e contexto. */
@@ -112,22 +122,20 @@ export function buildUserMessage(
     return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nAnswer in the same language as the question above. Explain the subject in useful detail (not a one-line summary, not a long essay). Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
   }
 
-  return `PREVIOUS CONVERSATION:
+  return `PREVIOUS CONVERSATION (background only):
 ${previous}
 
 ---
 
-QUESTION:
+QUESTION (answer this exact intent):
 ${question}
-
-Decide for yourself whether this question continues the previous conversation or starts a new topic. If it continues, keep that continuity. If it is new, ignore the previous subject.
 
 ---
 
-CONTEXT:
+CONTEXT (evidence for the QUESTION only):
 ${contextBlock}
 
 ---
 
-Answer in the same language as the question above. Explain the subject in useful detail (not a one-line summary, not a long essay). Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
+Answer the QUESTION above in the same language as that question. Explain in useful detail (not a one-line summary, not a long essay). Use CONTEXT only when it supports this QUESTION's subject. If CONTEXT is about something else, say the asked topic was not found — do not answer the other subject. Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
 }

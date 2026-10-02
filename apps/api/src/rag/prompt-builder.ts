@@ -31,14 +31,28 @@ export function buildPrompt(
     })),
   );
 
+  // Historico enviado ao provider: User intacto; Assistant truncado
+  // (resposta errada longa no turno anterior nao deve dominar o modelo).
+  const providerHistory = history.map((turn) =>
+    turn.role === "assistant"
+      ? { ...turn, content: truncateTurn(turn.content, 400) }
+      : turn,
+  );
+
   return {
     system: SYSTEM_PROMPT,
     user: buildUserMessage(question, contextBlock, history),
-    history,
+    history: providerHistory,
     chunks: orderedChunks,
   };
 }
 
 function orderChunksByRelevance(chunks: ScoredChunk[]): ScoredChunk[] {
   return [...chunks].sort((a, b) => b.finalScore - a.finalScore);
+}
+
+function truncateTurn(text: string, maxChars: number): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars).trimEnd()}…`;
 }

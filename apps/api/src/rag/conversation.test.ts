@@ -7,7 +7,10 @@ import {
   resolveSourcesFromIndices,
 } from "./citation-parser.js";
 import { buildPrompt } from "./prompt-builder.js";
-import { parseResolverOutput } from "./query-resolver.js";
+import {
+  formatHistoryForResolver,
+  parseResolverOutput,
+} from "./query-resolver.js";
 import type { ScoredChunk } from "./retriever.js";
 import { formatConversationHistory } from "../prompts/system.js";
 
@@ -54,6 +57,25 @@ describe("parseResolverOutput", () => {
   });
 });
 
+describe("formatHistoryForResolver", () => {
+  it("keeps user turns intact and truncates long assistant turns", () => {
+    const longAnswer = "A".repeat(500);
+    const formatted = formatHistoryForResolver(
+      [
+        { role: "user", content: "quais sao os 16 pontos?" },
+        { role: "assistant", content: longAnswer },
+        { role: "user", content: "os principais para mulheres" },
+      ],
+      8,
+    );
+
+    assert.match(formatted, /quais sao os 16 pontos\?/);
+    assert.match(formatted, /os principais para mulheres/);
+    assert.ok(!formatted.includes(longAnswer));
+    assert.match(formatted, /…/);
+  });
+});
+
 describe("conversation history helpers", () => {
   const history = [
     { role: "user" as const, content: "O que e Prakrti?" },
@@ -65,20 +87,21 @@ describe("conversation history helpers", () => {
 
   it("buildPrompt puts PREVIOUS before QUESTION before CONTEXT", () => {
     const prompt = buildPrompt(
-      "explique melhor o sattva",
+      "Quais aspectos de Prakrti explicam melhor o sattva?",
       [chunk({ content: "Sattva is the sentient force of Prakrti." })],
       history,
     );
 
     const previousIdx = prompt.user.indexOf("PREVIOUS CONVERSATION");
-    const questionIdx = prompt.user.indexOf("QUESTION:");
-    const contextIdx = prompt.user.indexOf("CONTEXT:");
+    const questionIdx = prompt.user.indexOf("QUESTION");
+    const contextIdx = prompt.user.indexOf("CONTEXT");
 
     assert.ok(previousIdx >= 0);
     assert.ok(questionIdx > previousIdx);
     assert.ok(contextIdx > questionIdx);
     assert.match(prompt.user, /O que e Prakrti/);
-    assert.match(prompt.user, /explique melhor o sattva/);
+    assert.match(prompt.user, /sattva/);
+    assert.match(prompt.user, /not found|something else|different subject/i);
     assert.equal(prompt.history.length, 2);
   });
 

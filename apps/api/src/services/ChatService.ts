@@ -66,7 +66,11 @@ export async function* handleChat(
       ? await resolveSearchQuery(question, priorHistory, llm)
       : { searchQuery: question, continuesPrevious: false };
 
-  const retrievalText = resolved.searchQuery;
+  // Busca e resposta usam a pergunta resolvida (follow-up vira pergunta autonoma).
+  const answerQuestion = resolved.searchQuery;
+  const retrievalText = resolved.continuesPrevious
+    ? anchorRetrievalQuery(resolved.searchQuery, priorHistory)
+    : resolved.searchQuery;
   const embedding = await embedder.embed(retrievalText);
 
   // Cache semantico so em conversas novas; follow-ups dependem do historico.
@@ -119,7 +123,7 @@ export async function* handleChat(
     return;
   }
 
-  const prompt = buildPrompt(question, chunks, priorHistory);
+  const prompt = buildPrompt(answerQuestion, chunks, priorHistory);
   const streamState = createStreamParseState();
 
   for await (const token of llm.generateStream({
@@ -198,4 +202,22 @@ async function loadConversationHistory(
       role: message.role,
       content: message.content,
     }));
+}
+
+/**
+ * Ancora a busca no topico das perguntas anteriores do usuario, para o
+ * embedding nao ser dominado so pelo filtro curto do follow-up.
+ */
+function anchorRetrievalQuery(
+  searchQuery: string,
+  history: ChatTurn[],
+): string {
+  const priorUsers = history
+    .filter((turn) => turn.role === "user")
+    .slice(-2)
+    .map((turn) => turn.content.trim())
+    .filter(Boolean);
+
+  if (priorUsers.length === 0) return searchQuery;
+  return `${priorUsers.join(" | ")} | ${searchQuery}`;
 }

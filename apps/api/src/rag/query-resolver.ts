@@ -1,24 +1,34 @@
 import type { ChatTurn, LLMProvider } from "../providers/llm/LLMProvider.js";
-import { formatConversationHistory } from "../prompts/system.js";
 
 export interface ResolvedSearchQuery {
   searchQuery: string;
   continuesPrevious: boolean;
 }
 
-const RESOLVER_SYSTEM = `You classify whether the latest user message continues the prior conversation or starts a new topic.
+const RESOLVER_SYSTEM = `You resolve the user's latest message into a standalone search question for a document library.
 
 Return ONLY valid JSON, no markdown:
 {"continuesPrevious":true|false,"searchQuery":"..."}
 
-How to decide:
-- continuesPrevious=true when the latest message depends on earlier turns to be understood (incomplete subject, reference to something just discussed, request to expand/list/clarify the prior topic).
-- continuesPrevious=false when the latest message is self-contained and introduces a different subject on its own.
+Decision rule:
+- Prefer continuesPrevious=true whenever the latest message is elliptical, fragmentary, a filter/refinement, a correction, or otherwise needs earlier turns to know WHAT topic is meant.
+- Use continuesPrevious=false only when the latest message clearly names a different self-contained topic on its own.
 
-When continuesPrevious=true, rewrite searchQuery as one complete standalone search question that includes the concrete subject from the prior conversation (so a document search can find the right passages).
-When continuesPrevious=false, set searchQuery to the latest message unchanged.
+When continuesPrevious=true:
+- Identify the concrete subject the user was discussing (from the User turns; Assistant turns are supporting context).
+- If the user later corrected the topic (e.g. "I meant X"), treat the corrected subject as current.
+- Rewrite searchQuery as ONE complete standalone question.
+- searchQuery MUST lead with that concrete prior subject, then add the new detail/filter from the latest message.
+  Good: "Quais dos 16 Pontos de Ananda Marga são principais para mulheres?"
+  Bad: "pontos principais para mulheres" (subject lost)
+  Bad: "papel das mulheres no PROUT" (switched topic)
+
+When continuesPrevious=false:
+- Set searchQuery to the latest message unchanged (or lightly cleaned).
 
 searchQuery must be in the same language as the latest message.`;
+
+const ASSISTANT_TRUNCATE = 320;
 
 /**
  * Usa o LLM para decidir continuidade e produzir uma query de busca autonoma.
@@ -33,7 +43,7 @@ export async function resolveSearchQuery(
     return { searchQuery: question, continuesPrevious: false };
   }
 
-  const conversation = formatConversationHistory(history, 6);
+  const conversation = formatHistoryForResolver(history, 8);
   const raw = await llm.generateComplete({
     system: RESOLVER_SYSTEM,
     user: `CONVERSATION:\n${conversation}\n\nLATEST MESSAGE:\n${question}`,
@@ -42,6 +52,24 @@ export async function resolveSearchQuery(
   });
 
   return parseResolverOutput(raw, question);
+}
+
+/** Historico enxuto: User intacto; Assistant truncado para nao diluir o topico. */
+export function formatHistoryForResolver(
+  history: ChatTurn[],
+  maxTurns = 8,
+): string {
+  return history
+    .slice(-maxTurns)
+    .map((turn) => {
+      const role = turn.role === "user" ? "User" : "Assistant";
+      const content =
+        turn.role === "assistant"
+          ? truncateForResolver(turn.content, ASSISTANT_TRUNCATE)
+          : turn.content.trim();
+      return `${role}: ${content}`;
+    })
+    .join("\n\n");
 }
 
 export function parseResolverOutput(
@@ -69,4 +97,10 @@ export function parseResolverOutput(
   } catch {
     return { searchQuery: fallbackQuestion, continuesPrevious: false };
   }
+}
+
+function truncateForResolver(text: string, maxChars: number): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars).trimEnd()}…`;
 }
