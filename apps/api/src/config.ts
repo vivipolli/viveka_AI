@@ -73,7 +73,7 @@ export const config = {
   conversationRetentionDays: num("CONVERSATION_RETENTION_DAYS", 30),
 
   /** Limite de tokens na resposta do LLM (resposta + linha CITATION_JSON). */
-  llmMaxOutputTokens: num("LLM_MAX_OUTPUT_TOKENS", 450),
+  llmMaxOutputTokens: num("LLM_MAX_OUTPUT_TOKENS", 900),
 
   /** Dimensao dos embeddings; deve casar com o schema VECTOR(n). */
   embeddingDimensions: 1536,

@@ -13,6 +13,11 @@ export class OpenAILLMProvider implements LLMProvider {
   }
 
   async *generateStream(params: LLMGenerateParams): AsyncIterable<string> {
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role,
+      content: turn.content,
+    }));
+
     const stream = await this.client.chat.completions.create({
       model: this.model,
       temperature: 0.2,
@@ -20,6 +25,7 @@ export class OpenAILLMProvider implements LLMProvider {
       stream: true,
       messages: [
         { role: "system", content: params.system },
+        ...history,
         { role: "user", content: params.user },
       ],
     });

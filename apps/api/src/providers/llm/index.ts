@@ -26,4 +26,4 @@ export function getLLMProvider(): LLMProvider {
   return instance;
 }
 
-export type { LLMProvider } from "./LLMProvider.js";
+export type { ChatTurn, LLMProvider } from "./LLMProvider.js";

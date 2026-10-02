@@ -22,7 +22,14 @@ export class GeminiLLMProvider implements LLMProvider {
       },
     });
 
-    const result = await model.generateContentStream(params.user);
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role === "assistant" ? "model" : "user",
+      parts: [{ text: turn.content }],
+    }));
+
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessageStream(params.user);
+
     for await (const chunk of result.stream) {
       const text = chunk.text();
       if (text) yield text;

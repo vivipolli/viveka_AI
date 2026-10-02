@@ -1,6 +1,13 @@
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface LLMGenerateParams {
   system: string;
   user: string;
+  /** Turnos anteriores da mesma conversa (sem a pergunta atual). */
+  history?: ChatTurn[];
   /** Idioma alvo (dica; o modelo tambem infere pela pergunta). */
   language?: string;
 }

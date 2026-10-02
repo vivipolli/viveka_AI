@@ -13,12 +13,17 @@ export class ClaudeLLMProvider implements LLMProvider {
   }
 
   async *generateStream(params: LLMGenerateParams): AsyncIterable<string> {
+    const history = (params.history ?? []).map((turn) => ({
+      role: turn.role,
+      content: turn.content,
+    }));
+
     const stream = this.client.messages.stream({
       model: this.model,
       max_tokens: config.llmMaxOutputTokens,
       temperature: 0.2,
       system: params.system,
-      messages: [{ role: "user", content: params.user }],
+      messages: [...history, { role: "user", content: params.user }],
     });
 
     for await (const event of stream) {

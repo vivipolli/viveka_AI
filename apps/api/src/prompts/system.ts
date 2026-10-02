@@ -12,6 +12,8 @@ STRICT RULES:
 - Answer ONLY using the information present in the provided context. Never use outside knowledge to define concepts.
 - If the information does not exist in the context, say clearly that it was not found.
 - Write your entire answer in the SAME language as the user's question (e.g. Bengali, Hindi, Portuguese, English, Spanish, or any other language they use).
+- When conversation history is present, use it to understand follow-up questions and keep continuity. If the latest question is a new topic, answer that topic and do not drag in the previous subject.
+- Still ground every factual claim in the provided CONTEXT excerpts.
 - For conceptual, doctrinal, or explanatory questions, base your answer primarily on book excerpts (PDF), citations, and transcripts.
 - Baba Stories may complement the answer as brief illustrations when they clearly support what the books teach — never replace book-based explanations.
 - Stories are anecdotes told by acharyas or devotees; they may lack date, place, or other metadata — never invent missing details.
@@ -69,5 +71,5 @@ export function buildContextBlock(chunks: ContextChunk[]): string {
 
 /** Monta a mensagem do usuario combinando contexto e pergunta. */
 export function buildUserMessage(question: string, contextBlock: string): string {
-  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nAnswer in the same language as the question above. Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
+  return `CONTEXT:\n${contextBlock}\n\n---\n\nQUESTION:\n${question}\n\nAnswer in the same language as the question above. If this continues a previous exchange, keep continuity with that conversation while grounding facts in the CONTEXT. Base your answer primarily on book excerpts, citations, and transcripts. You may mention Baba Stories briefly when they clearly complement the explanation. End with the CITATION_JSON line as instructed.`;
 }
